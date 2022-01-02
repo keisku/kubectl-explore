@@ -20,7 +20,7 @@ func main() {
 Fields are identified via a simple JSONPath identifier:
 	<type>.<fieldName>[.<fieldName>]
 `,
-		Short: "This command explores the fields associated with each supported API resource.",
+		Short: "Find documentation for a resource to explain.",
 		Example: `
 # Explore pod fields.
 kubectl-explore pod
