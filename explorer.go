@@ -93,12 +93,11 @@ func (e *Explorer) Run(w io.Writer) error {
 	if err != nil {
 		return err
 	}
-	e.explore(gvk)
-	if e.err != nil {
-		return e.err
+	if err := e.explore(gvk); err != nil {
+		return err
 	}
 
-	path, err := findPath(e.paths())
+	path, err := getPathToExplain(e.paths())
 	if err != nil {
 		return fmt.Errorf("find the path: %w", err)
 	}
@@ -126,8 +125,9 @@ func (e *Explorer) Run(w io.Writer) error {
 	return nil
 }
 
-// For overwriting when tests.
-var findPath = func(paths []string) (string, error) {
+// getPathToExplain gets the path to explain by a user's input.
+// Defining this func as a variable for overwriting when tests.
+var getPathToExplain = func(paths []string) (string, error) {
 	if len(paths) == 1 {
 		return paths[0], nil
 	}
@@ -140,9 +140,14 @@ var findPath = func(paths []string) (string, error) {
 	return paths[idx], nil
 }
 
-func (e *Explorer) explore(gvk schema.GroupVersionKind) {
+func (e *Explorer) explore(gvk schema.GroupVersionKind) error {
+	s := e.openAPISchema.LookupResource(gvk)
+	if s == nil {
+		return fmt.Errorf("%#v is not found on the Open API schema", gvk)
+	}
 	e.rootSchema = e.openAPISchema.LookupResource(gvk)
 	e.rootSchema.Accept(e)
+	return e.err
 }
 
 // paths returns paths explorer collects. paths that don't contain
