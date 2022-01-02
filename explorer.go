@@ -16,9 +16,10 @@ import (
 	"k8s.io/kubectl/pkg/util/openapi"
 )
 
-var _ proto.SchemaVisitor = (*explorer)(nil)
+var _ proto.SchemaVisitor = (*Explorer)(nil)
 
-type explorer struct {
+// Explorer fields associated with each supported API resource to explain.
+type Explorer struct {
 	discovery      discovery.CachedDiscoveryInterface
 	restMapper     meta.RESTMapper
 	openAPISchema  openapi.Resources
@@ -30,7 +31,8 @@ type explorer struct {
 	pathSchema     map[string]proto.Schema
 }
 
-func newExplorer(factory cmdutil.Factory, fieldPath string) (*explorer, error) {
+// NewExplorer initializes Explorer.
+func NewExplorer(factory cmdutil.Factory, fieldPath string) (*Explorer, error) {
 	discovery, err := factory.ToDiscoveryClient()
 	if err != nil {
 		return nil, fmt.Errorf("get the discovery client from the factory: %w", err)
@@ -61,7 +63,7 @@ func newExplorer(factory cmdutil.Factory, fieldPath string) (*explorer, error) {
 		}
 		kind = strings.ToLower(kinds[idx])
 	}
-	return &explorer{
+	return &Explorer{
 		discovery:      discovery,
 		restMapper:     restMapper,
 		openAPISchema:  openAPISchema,
@@ -86,7 +88,7 @@ func allKinds(discovery discovery.CachedDiscoveryInterface) ([]string, error) {
 	return kinds, nil
 }
 
-func (e *explorer) run(w io.Writer) error {
+func (e *Explorer) Run(w io.Writer) error {
 	gvk, err := e.gvk()
 	if err != nil {
 		return err
@@ -138,14 +140,14 @@ var findPath = func(paths []string) (string, error) {
 	return paths[idx], nil
 }
 
-func (e *explorer) explore(gvk schema.GroupVersionKind) {
+func (e *Explorer) explore(gvk schema.GroupVersionKind) {
 	e.rootSchema = e.openAPISchema.LookupResource(gvk)
 	e.rootSchema.Accept(e)
 }
 
 // paths returns paths explorer collects. paths that don't contain
 // the path a user input will be ignored.
-func (e *explorer) paths() []string {
+func (e *Explorer) paths() []string {
 	ps := make([]string, 0, len(e.pathSchema))
 	for p := range e.pathSchema {
 		if strings.Contains(p, e.inputFieldPath) {
@@ -156,7 +158,7 @@ func (e *explorer) paths() []string {
 	return ps
 }
 
-func (e *explorer) gvk() (schema.GroupVersionKind, error) {
+func (e *Explorer) gvk() (schema.GroupVersionKind, error) {
 	gvr, _, err := explain.SplitAndParseResourceRequest(e.kind, e.restMapper)
 	if err != nil {
 		return schema.GroupVersionKind{}, fmt.Errorf("get the group version resource by %s: %w", e.kind, err)
@@ -174,7 +176,7 @@ func (e *explorer) gvk() (schema.GroupVersionKind, error) {
 	return gvk, nil
 }
 
-func (e *explorer) VisitKind(k *proto.Kind) {
+func (e *Explorer) VisitKind(k *proto.Kind) {
 	keys := k.Keys()
 	paths := make([]string, len(keys))
 	for i, key := range keys {
@@ -194,7 +196,7 @@ func (e *explorer) VisitKind(k *proto.Kind) {
 
 var visitedReferences = map[string]struct{}{}
 
-func (e *explorer) VisitReference(r proto.Reference) {
+func (e *Explorer) VisitReference(r proto.Reference) {
 	if _, ok := visitedReferences[r.Reference()]; ok {
 		return
 	}
@@ -203,14 +205,14 @@ func (e *explorer) VisitReference(r proto.Reference) {
 	delete(visitedReferences, r.Reference())
 }
 
-func (e *explorer) VisitPrimitive(p *proto.Primitive) {
+func (e *Explorer) VisitPrimitive(p *proto.Primitive) {
 	// Nothing to do.
 }
 
-func (e *explorer) VisitArray(a *proto.Array) {
+func (e *Explorer) VisitArray(a *proto.Array) {
 	a.SubType.Accept(e)
 }
 
-func (e *explorer) VisitMap(m *proto.Map) {
+func (e *Explorer) VisitMap(m *proto.Map) {
 	m.SubType.Accept(e)
 }

@@ -36,17 +36,17 @@ kubectl-explore
 		DisableFlagsInUseLine: true,
 		Version:               "v0.1.0",
 		RunE: func(_ *cobra.Command, args []string) error {
-			var e *explorer
+			var e *Explorer
 			var err error
 			if len(args) == 0 {
-				e, err = newExplorer(factory, "")
+				e, err = NewExplorer(factory, "")
 			} else {
-				e, err = newExplorer(factory, args[0])
+				e, err = NewExplorer(factory, args[0])
 			}
 			if err != nil {
 				return err
 			}
-			return e.run(os.Stdout)
+			return e.Run(os.Stdout)
 		},
 	}
 	if err := cmd.Execute(); err != nil {
