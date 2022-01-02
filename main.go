@@ -34,7 +34,7 @@ kubectl-explore
 		SilenceUsage:          true,
 		SilenceErrors:         true,
 		DisableFlagsInUseLine: true,
-		Version:               "v0.1.0",
+		Version:               "0.1.0",
 		RunE: func(_ *cobra.Command, args []string) error {
 			var e *Explorer
 			var err error
