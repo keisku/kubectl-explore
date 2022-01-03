@@ -45,5 +45,5 @@ Validate if `kubectl explore` can be executed.
 [The Kubernetes documentation](https://kubernetes.io/docs/tasks/extend-kubectl/kubectl-plugins/#using-a-plugin) explains how to use a plugin.
 
 ```shell
-kubectl explore --version
+kubectl explore --help
 ```
