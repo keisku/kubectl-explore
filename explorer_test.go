@@ -5,35 +5,48 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"testing"
 
 	openapi_v2 "github.com/googleapis/gnostic/openapiv2"
 	"github.com/stretchr/testify/assert"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/client-go/rest/fake"
-	cmdtesting "k8s.io/kubectl/pkg/cmd/testing"
-	"k8s.io/kubectl/pkg/scheme"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/kubectl/pkg/util/openapi"
 )
 
-func Test_Explorer_Run(t *testing.T) {
-	factory := newFactory(t)
-	defer factory.Cleanup()
+func Test_Explorer_Explore(t *testing.T) {
+	openAPIResources := fetchOpenAPIResources(t)
 	tests := []struct {
 		inputFieldPath string
+		gvk            schema.GroupVersionKind
 		wantW          string
 		wantErr        string
 	}{
 		{
 			inputFieldPath: "node.spec.hoge",
-			wantErr:        `explain "node.spec.hoge": field "hoge" does not exist`,
+			gvk: schema.GroupVersionKind{
+				Group:   "",
+				Version: "v1",
+				Kind:    "Node",
+			},
+			wantErr: `explain "node.spec.hoge": field "hoge" does not exist`,
 		},
 		{
-			inputFieldPath: "hoge.foo.bar",
-			wantErr:        "get the group version resource by hoge: no matches for /, Resource=hoge",
+			inputFieldPath: "hoge.spec",
+			gvk: schema.GroupVersionKind{
+				Group:   "",
+				Version: "v1",
+				Kind:    "Hoge",
+			},
+			wantErr: `schema.GroupVersionKind{Group:"", Version:"v1", Kind:"Hoge"} is not found on the Open API schema`,
 		},
 		{
 			inputFieldPath: "pod.spec.tolerations.key",
+			gvk: schema.GroupVersionKind{
+				Group:   "",
+				Version: "v1",
+				Kind:    "Pod",
+			},
 			wantW: `KIND:     Pod
 VERSION:  v1
 
@@ -47,6 +60,11 @@ DESCRIPTION:
 		},
 		{
 			inputFieldPath: "pod.spec.serviceAccount",
+			gvk: schema.GroupVersionKind{
+				Group:   "",
+				Version: "v1",
+				Kind:    "Pod",
+			},
 			wantW: `KIND:     Pod
 VERSION:  v1
 
@@ -59,6 +77,11 @@ DESCRIPTION:
 		},
 		{
 			inputFieldPath: "node.spec",
+			gvk: schema.GroupVersionKind{
+				Group:   "",
+				Version: "v1",
+				Kind:    "Node",
+			},
 			wantW: `KIND:     Node
 VERSION:  v1
 
@@ -106,15 +129,18 @@ FIELDS:
 	}
 	for _, tt := range tests {
 		t.Run(fmt.Sprintf(`Explain "%s"`, tt.inputFieldPath), func(t *testing.T) {
-			e, err := NewExplorer(factory, tt.inputFieldPath)
-			assert.Nil(t, err)
+			e := NewExplorer(
+				tt.inputFieldPath,
+				strings.ToLower(tt.gvk.Kind),
+				openAPIResources,
+			)
 			// Overwrite this func for testing.
 			// Usually, the result depends on the user's input.
 			getPathToExplain = func(_ []string) (string, error) {
 				return tt.inputFieldPath, nil
 			}
 			var b bytes.Buffer
-			err = e.Run(&b)
+			err := e.Explore(&b, tt.gvk)
 			if tt.wantErr == "" {
 				assert.Nil(t, err)
 			} else {
@@ -123,22 +149,6 @@ FIELDS:
 			assert.Equal(t, tt.wantW, b.String())
 		})
 	}
-}
-
-func newFactory(t *testing.T) *cmdtesting.TestFactory {
-	t.Helper()
-
-	factory := cmdtesting.NewTestFactory().WithNamespace("test")
-	factory.Client = &fake.RESTClient{
-		NegotiatedSerializer: scheme.Codecs.WithoutConversion(),
-		GroupVersion:         corev1.SchemeGroupVersion,
-		Client: fake.CreateHTTPClient(func(req *http.Request) (*http.Response, error) {
-			return nil, fmt.Errorf("request url: %#v, and request: %#v", req.URL, req)
-		}),
-	}
-	factory.ClientConfigVal = cmdtesting.DefaultClientConfig()
-	factory.OpenAPISchemaFunc = func() (openapi.Resources, error) { return fetchOpenAPIResources(t), nil }
-	return factory
 }
 
 const urlToSaggerJsonFormat = "https://raw.githubusercontent.com/kubernetes/kubernetes/release-%s/api/openapi-spec/swagger.json"
