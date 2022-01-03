@@ -4,6 +4,8 @@
 
 This is a plugin for `kubectl` to fuzzy-find and explain the field supported API resource.
 
+![demo](./demo.gif)
+
 ## What
 
 `kubectl-explore` finds and explains the field associated with each supported API resource.
@@ -44,6 +46,29 @@ sudo mv $GOPATH/bin/kubectl-explore /usr/local/bin
 Validate if `kubectl explore` can be executed.
 [The Kubernetes documentation](https://kubernetes.io/docs/tasks/extend-kubectl/kubectl-plugins/#using-a-plugin) explains how to use a plugin.
 
-```shell
-kubectl explore --help
+```
+$ kubectl explore --help
+This command finds fields associated with each supported API resource to explain.
+
+Fields are identified via a simple JSONPath identifier:
+        <type>.<fieldName>[.<fieldName>]
+
+Usage:
+  kubectl-explore RESOURCE [options] [flags]
+
+Examples:
+
+# Explore pod fields.
+kubectl-explore pod
+
+# Explore "pod.spec.containers" fields.
+kubectl-explore pod.spec.containers
+
+# Explore the resource selected by interactive fuzzy-finder.
+kubectl-explore
+
+
+Flags:
+      --api-version string   Get different explanations for particular API version (API group/version)
+  -h, --help                 help for kubectl-explore
 ```
