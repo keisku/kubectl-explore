@@ -37,7 +37,7 @@ sudo mv kubectl-explore /usr/local/bin
 ### Source
 
 ```shell
-go install github.com/kei6u/kubectl-explore
+go install github.com/kei6u/kubectl-explore@0.1.0
 sudo mv $GOPATH/bin/kubectl-explore /usr/local/bin
 ```
 
