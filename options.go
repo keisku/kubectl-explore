@@ -24,8 +24,6 @@ type Options struct {
 	Mapper    meta.RESTMapper
 	Discovery discovery.CachedDiscoveryInterface
 	Schema    openapi.Resources
-
-	kind string
 }
 
 func NewOptions(streams genericclioptions.IOStreams) *Options {
@@ -105,50 +103,55 @@ func (o *Options) Validate(args []string) error {
 }
 
 func (o *Options) Run(args []string) error {
-	if err := o.setKind(args); err != nil {
-		return err
-	}
-	e := NewExplorer(o.InputFieldPath, o.kind, o.Schema)
-	gvk, err := o.gvk()
+	kind, err := o.getKind(args)
 	if err != nil {
 		return err
 	}
-	return e.Explore(o.Out, gvk)
+	gvk, err := o.gvk(kind)
+	if err != nil {
+		return err
+	}
+	e, err := NewExplorer(o.InputFieldPath, kind, o.Schema, gvk)
+	if err != nil {
+		return err
+	}
+	return e.Explore(o.Out)
 }
 
-func (o *Options) setKind(args []string) error {
+func (o *Options) getKind(args []string) (string, error) {
 	var inResource string
 	if len(args) == 1 {
 		inResource = args[0]
 	}
+	var kind string
 	if inResource == "" {
 		rs, err := allAPIResources(o.Discovery)
 		if err != nil {
-			return err
+			return "", err
 		}
 		idx, err := fuzzyfinder.Find(rs, func(i int) string {
 			return strings.ToLower(rs[i])
 		})
 		if err != nil {
-			return fmt.Errorf("fuzzy find the API resource: %w", err)
+			return "", fmt.Errorf("fuzzy find the API resource: %w", err)
 		}
-		o.kind = strings.ToLower(rs[idx])
+		kind = strings.ToLower(rs[idx])
 	} else {
-		o.kind = strings.Split(inResource, ".")[0]
+		kind = strings.Split(inResource, ".")[0]
 	}
-	return nil
+	return kind, nil
 }
 
-func (o *Options) gvk() (schema.GroupVersionKind, error) {
+func (o *Options) gvk(kind string) (schema.GroupVersionKind, error) {
 	var gvr schema.GroupVersionResource
 	var err error
 	if len(o.APIVersion) == 0 {
-		gvr, _, err = explain.SplitAndParseResourceRequestWithMatchingPrefix(o.kind, o.Mapper)
+		gvr, _, err = explain.SplitAndParseResourceRequestWithMatchingPrefix(kind, o.Mapper)
 	} else {
-		gvr, _, err = explain.SplitAndParseResourceRequest(o.kind, o.Mapper)
+		gvr, _, err = explain.SplitAndParseResourceRequest(kind, o.Mapper)
 	}
 	if err != nil {
-		return schema.GroupVersionKind{}, fmt.Errorf("get the group version resource by %s %s: %w", o.APIVersion, o.kind, err)
+		return schema.GroupVersionKind{}, fmt.Errorf("get the group version resource by %s %s: %w", o.APIVersion, kind, err)
 	}
 
 	gvk, err := o.Mapper.KindFor(gvr)
