@@ -18,8 +18,7 @@ import (
 type Options struct {
 	genericclioptions.IOStreams
 
-	InputFieldPath string
-	APIVersion     string
+	APIVersion string
 
 	Mapper    meta.RESTMapper
 	Discovery discovery.CachedDiscoveryInterface
@@ -103,6 +102,10 @@ func (o *Options) Validate(args []string) error {
 }
 
 func (o *Options) Run(args []string) error {
+	var inputFieldPath string
+	if 0 < len(args) {
+		inputFieldPath = args[0]
+	}
 	kind, err := o.getKind(args)
 	if err != nil {
 		return err
@@ -111,7 +114,7 @@ func (o *Options) Run(args []string) error {
 	if err != nil {
 		return err
 	}
-	e, err := NewExplorer(o.InputFieldPath, kind, o.Schema, gvk)
+	e, err := NewExplorer(inputFieldPath, kind, o.Schema, gvk)
 	if err != nil {
 		return err
 	}

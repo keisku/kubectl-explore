@@ -32,15 +32,6 @@ func Test_Explorer_Explore(t *testing.T) {
 			wantErr: `explain "node.spec.hoge": field "hoge" does not exist`,
 		},
 		{
-			inputFieldPath: "hoge.spec",
-			gvk: schema.GroupVersionKind{
-				Group:   "",
-				Version: "v1",
-				Kind:    "Hoge",
-			},
-			wantErr: `schema.GroupVersionKind{Group:"", Version:"v1", Kind:"Hoge"} is not found on the Open API schema`,
-		},
-		{
 			inputFieldPath: "pod.spec.tolerations.key",
 			gvk: schema.GroupVersionKind{
 				Group:   "",
@@ -129,18 +120,20 @@ FIELDS:
 	}
 	for _, tt := range tests {
 		t.Run(fmt.Sprintf(`Explain "%s"`, tt.inputFieldPath), func(t *testing.T) {
-			e := NewExplorer(
+			e, err := NewExplorer(
 				tt.inputFieldPath,
 				strings.ToLower(tt.gvk.Kind),
 				openAPIResources,
+				tt.gvk,
 			)
+			assert.Nil(t, err)
 			// Overwrite this func for testing.
 			// Usually, the result depends on the user's input.
-			getPathToExplain = func(_ []string) (string, error) {
+			getPathToExplain = func(_ *Explorer) (string, error) {
 				return tt.inputFieldPath, nil
 			}
 			var b bytes.Buffer
-			err := e.Explore(&b, tt.gvk)
+			err = e.Explore(&b)
 			if tt.wantErr == "" {
 				assert.Nil(t, err)
 			} else {

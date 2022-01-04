@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"sort"
@@ -20,70 +21,61 @@ type Explorer struct {
 	openAPISchema  openapi.Resources
 	err            error
 	inputFieldPath string
-	kind           string
 	prevPath       string
 	pathSchema     map[string]proto.Schema
+	schemaByGvk    proto.Schema
+	gvk            schema.GroupVersionKind
 }
 
 // NewExplorer initializes Explorer.
-func NewExplorer(fieldPath, kind string, r openapi.Resources) *Explorer {
+func NewExplorer(fieldPath, kind string, r openapi.Resources, gvk schema.GroupVersionKind) (*Explorer, error) {
+	s := r.LookupResource(gvk)
+	if s == nil {
+		return nil, fmt.Errorf("%#v is not found on the Open API schema", gvk)
+	}
 	return &Explorer{
 		openAPISchema:  r,
 		inputFieldPath: fieldPath,
-		kind:           kind,
 		prevPath:       kind,
 		pathSchema:     make(map[string]proto.Schema),
-	}
+		schemaByGvk:    s,
+		gvk:            gvk,
+	}, nil
 }
 
-// Explore finds the field associated with the "gvk" and explain it.
-func (e *Explorer) Explore(w io.Writer, gvk schema.GroupVersionKind) error {
-	s := e.openAPISchema.LookupResource(gvk)
-	if s == nil {
-		return fmt.Errorf("%#v is not found on the Open API schema", gvk)
-	}
-	s.Accept(e)
+// Explore finds the field to explain it.
+func (e *Explorer) Explore(w io.Writer) error {
+	e.schemaByGvk.Accept(e)
 	if e.err != nil {
 		return e.err
 	}
 
-	path, err := getPathToExplain(e.paths())
+	path, err := getPathToExplain(e)
 	if err != nil {
-		return fmt.Errorf("find the path: %w", err)
+		return fmt.Errorf("get the path to explain: %w", err)
 	}
 
-	// This is the case that path specifies the top-level field,
-	// for example, "pod.spec", "pod.metadata"
-	if strings.Count(path, ".") == 1 {
-		fieldPath := []string{path[strings.LastIndex(path, ".")+1:]}
-		return explain.PrintModelDescription(fieldPath, w, s, gvk, false)
-	}
-
-	// get the parent schema to explain.
-	// e.g. "pod.spec.containers.env" -> "pod.spec.containers"
-	parent, ok := e.pathSchema[path[:strings.LastIndex(path, ".")]]
-	if !ok {
-		return fmt.Errorf("%s is not found", path)
-	}
-
-	// get the key from the path.
-	// e.g. "pod.spec.containers.env" -> "env"
-	fieldPath := []string{path[strings.LastIndex(path, ".")+1:]}
-	if err := explain.PrintModelDescription(fieldPath, w, parent, gvk, false); err != nil {
-		return fmt.Errorf(`explain "%s": %w`, path, err)
-	}
-	return nil
+	return e.explain(w, path)
 }
 
 // getPathToExplain gets the path to explain by a user's input.
-// Defining this func as a variable for overwriting when tests.
-var getPathToExplain = func(paths []string) (string, error) {
+// Define this func as a variable for overwriting when tests.
+var getPathToExplain = func(e *Explorer) (string, error) {
+	paths := e.paths()
 	if len(paths) == 1 {
 		return paths[0], nil
 	}
-	idx, err := fuzzyfinder.Find(paths, func(i int) string {
-		return paths[i]
-	})
+	idx, err := fuzzyfinder.Find(
+		paths,
+		func(i int) string { return paths[i] },
+		fuzzyfinder.WithPreviewWindow(func(i, width, height int) string {
+			var w bytes.Buffer
+			if err := e.explain(&w, paths[i]); err != nil {
+				return fmt.Sprintf("preview is broken: %s", err)
+			}
+			return w.String()
+		}),
+	)
 	if err != nil {
 		return "", err
 	}
@@ -101,6 +93,31 @@ func (e *Explorer) paths() []string {
 	}
 	sort.Strings(ps)
 	return ps
+}
+
+// explain explains the field associated with the given path.
+func (e *Explorer) explain(w io.Writer, path string) error {
+	// This is the case that path specifies the top-level field,
+	// for example, "pod.spec", "pod.metadata"
+	if strings.Count(path, ".") == 1 {
+		fieldPath := []string{path[strings.LastIndex(path, ".")+1:]}
+		return explain.PrintModelDescription(fieldPath, w, e.schemaByGvk, e.gvk, false)
+	}
+
+	// get the parent schema to explain.
+	// e.g. "pod.spec.containers.env" -> "pod.spec.containers"
+	parent, ok := e.pathSchema[path[:strings.LastIndex(path, ".")]]
+	if !ok {
+		return fmt.Errorf("%s is not found", path)
+	}
+
+	// get the key from the path.
+	// e.g. "pod.spec.containers.env" -> "env"
+	fieldPath := []string{path[strings.LastIndex(path, ".")+1:]}
+	if err := explain.PrintModelDescription(fieldPath, w, parent, e.gvk, false); err != nil {
+		return fmt.Errorf(`explain "%s": %w`, path, err)
+	}
+	return nil
 }
 
 func (e *Explorer) VisitKind(k *proto.Kind) {
