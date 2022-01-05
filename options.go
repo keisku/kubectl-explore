@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/ktr0731/go-fuzzyfinder"
@@ -10,6 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/client-go/discovery"
+	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/explain"
 	"k8s.io/kubectl/pkg/util/openapi"
@@ -31,8 +33,13 @@ func NewOptions(streams genericclioptions.IOStreams) *Options {
 	}
 }
 
-func NewCmd(f cmdutil.Factory, streams genericclioptions.IOStreams) *cobra.Command {
-	o := NewOptions(streams)
+func NewCmd() *cobra.Command {
+	f := cmdutil.NewFactory(genericclioptions.NewConfigFlags(true))
+	o := NewOptions(genericclioptions.IOStreams{
+		In:     os.Stdin,
+		Out:    os.Stdout,
+		ErrOut: os.Stderr,
+	})
 
 	cmd := &cobra.Command{
 		Use: "kubectl explore RESOURCE [options]",
