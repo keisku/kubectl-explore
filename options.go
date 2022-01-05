@@ -27,12 +27,6 @@ type Options struct {
 	Schema    openapi.Resources
 }
 
-func NewOptions(streams genericclioptions.IOStreams) *Options {
-	return &Options{
-		IOStreams: streams,
-	}
-}
-
 func NewCmd() *cobra.Command {
 	f := cmdutil.NewFactory(genericclioptions.NewConfigFlags(true))
 	o := NewOptions(genericclioptions.IOStreams{
@@ -69,6 +63,12 @@ kubectl explore
 	return cmd
 }
 
+func NewOptions(streams genericclioptions.IOStreams) *Options {
+	return &Options{
+		IOStreams: streams,
+	}
+}
+
 func (o *Options) Complete(f cmdutil.Factory) error {
 	var err error
 	o.Discovery, err = f.ToDiscoveryClient()
@@ -84,20 +84,6 @@ func (o *Options) Complete(f cmdutil.Factory) error {
 		return err
 	}
 	return nil
-}
-
-func allAPIResourceNames(discovery discovery.CachedDiscoveryInterface) ([]string, error) {
-	resourceList, err := discovery.ServerPreferredResources()
-	if err != nil {
-		return nil, fmt.Errorf("get all API resources: %w", err)
-	}
-	var names []string
-	for _, list := range resourceList {
-		for _, r := range list.APIResources {
-			names = append(names, r.Name)
-		}
-	}
-	return names, nil
 }
 
 func (o *Options) Validate(args []string) error {
@@ -150,6 +136,20 @@ func (o *Options) getResourceName(args []string) (string, error) {
 		name = strings.Split(inResource, ".")[0]
 	}
 	return name, nil
+}
+
+func allAPIResourceNames(discovery discovery.CachedDiscoveryInterface) ([]string, error) {
+	resourceList, err := discovery.ServerPreferredResources()
+	if err != nil {
+		return nil, fmt.Errorf("get all API resources: %w", err)
+	}
+	var names []string
+	for _, list := range resourceList {
+		for _, r := range list.APIResources {
+			names = append(names, r.Name)
+		}
+	}
+	return names, nil
 }
 
 func (o *Options) gvk(name string) (schema.GroupVersionKind, error) {
