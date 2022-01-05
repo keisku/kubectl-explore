@@ -72,7 +72,7 @@ Download the binary from [GitHub Releases](https://github.com/kei6u/kubectl-expl
 ### Linux
 
 ```shell
-curl -L -o kubectl-explore.tar.gz https://github.com/kei6u/kubectl-explore/releases/download/0.3.0/kubectl-explore_linux_x86_64.tar.gz
+curl -L -o kubectl-explore.tar.gz https://github.com/kei6u/kubectl-explore/releases/download/v0.3.0/kubectl-explore_linux_x86_64.tar.gz
 tar -xvf kubectl-explore.tar.gz
 sudo mv kubectl-explore /usr/local/bin
 ```
@@ -80,7 +80,7 @@ sudo mv kubectl-explore /usr/local/bin
 ### OSX
 
 ```shell
-curl -L -o kubectl-explore.tar.gz https://github.com/kei6u/kubectl-explore/releases/download/0.3.0/kubectl-explore_darwin_x86_64.tar.gz
+curl -L -o kubectl-explore.tar.gz https://github.com/kei6u/kubectl-explore/releases/download/v0.3.0/kubectl-explore_darwin_x86_64.tar.gz
 tar -xvf kubectl-explore.tar.gz
 sudo mv kubectl-explore /usr/local/bin
 ```
