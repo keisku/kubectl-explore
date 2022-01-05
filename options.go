@@ -35,7 +35,7 @@ func NewCmd(f cmdutil.Factory, streams genericclioptions.IOStreams) *cobra.Comma
 	o := NewOptions(streams)
 
 	cmd := &cobra.Command{
-		Use: "kubectl-explore RESOURCE [options]",
+		Use: "kubectl explore RESOURCE [options]",
 		Long: `This command finds fields associated with each supported API resource to explain.
 
 Fields are identified via a simple JSONPath identifier:
@@ -44,13 +44,13 @@ Fields are identified via a simple JSONPath identifier:
 		Short: "Find documentation for a resource to explain.",
 		Example: `
 # Explore pod fields.
-kubectl-explore pod
+kubectl explore pod
 
 # Explore "pod.spec.containers" fields.
-kubectl-explore pod.spec.containers
+kubectl explore pod.spec.containers
 
 # Explore the resource selected by interactive fuzzy-finder.
-kubectl-explore
+kubectl explore
 `,
 		Run: func(_ *cobra.Command, args []string) {
 			cmdutil.CheckErr(o.Complete(f))
