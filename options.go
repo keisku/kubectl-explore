@@ -86,18 +86,18 @@ func (o *Options) Complete(f cmdutil.Factory) error {
 	return nil
 }
 
-func allAPIResources(discovery discovery.CachedDiscoveryInterface) ([]string, error) {
+func allAPIResourceNames(discovery discovery.CachedDiscoveryInterface) ([]string, error) {
 	resourceList, err := discovery.ServerPreferredResources()
 	if err != nil {
 		return nil, fmt.Errorf("get all API resources: %w", err)
 	}
-	var kinds []string
+	var names []string
 	for _, list := range resourceList {
 		for _, r := range list.APIResources {
-			kinds = append(kinds, r.Kind)
+			names = append(names, r.Name)
 		}
 	}
-	return kinds, nil
+	return names, nil
 }
 
 func (o *Options) Validate(args []string) error {
@@ -113,55 +113,55 @@ func (o *Options) Run(args []string) error {
 	if 0 < len(args) {
 		inputFieldPath = args[0]
 	}
-	kind, err := o.getKind(args)
+	name, err := o.getResourceName(args)
 	if err != nil {
 		return err
 	}
-	gvk, err := o.gvk(kind)
+	gvk, err := o.gvk(name)
 	if err != nil {
 		return err
 	}
-	e, err := NewExplorer(inputFieldPath, kind, o.Schema, gvk)
+	e, err := NewExplorer(inputFieldPath, name, o.Schema, gvk)
 	if err != nil {
 		return err
 	}
 	return e.Explore(o.Out)
 }
 
-func (o *Options) getKind(args []string) (string, error) {
+func (o *Options) getResourceName(args []string) (string, error) {
 	var inResource string
 	if len(args) == 1 {
 		inResource = args[0]
 	}
-	var kind string
+	var name string
 	if inResource == "" {
-		rs, err := allAPIResources(o.Discovery)
+		names, err := allAPIResourceNames(o.Discovery)
 		if err != nil {
 			return "", err
 		}
-		idx, err := fuzzyfinder.Find(rs, func(i int) string {
-			return strings.ToLower(rs[i])
+		idx, err := fuzzyfinder.Find(names, func(i int) string {
+			return strings.ToLower(names[i])
 		})
 		if err != nil {
 			return "", fmt.Errorf("fuzzy find the API resource: %w", err)
 		}
-		kind = strings.ToLower(rs[idx])
+		name = strings.ToLower(names[idx])
 	} else {
-		kind = strings.Split(inResource, ".")[0]
+		name = strings.Split(inResource, ".")[0]
 	}
-	return kind, nil
+	return name, nil
 }
 
-func (o *Options) gvk(kind string) (schema.GroupVersionKind, error) {
+func (o *Options) gvk(name string) (schema.GroupVersionKind, error) {
 	var gvr schema.GroupVersionResource
 	var err error
 	if len(o.APIVersion) == 0 {
-		gvr, _, err = explain.SplitAndParseResourceRequestWithMatchingPrefix(kind, o.Mapper)
+		gvr, _, err = explain.SplitAndParseResourceRequestWithMatchingPrefix(name, o.Mapper)
 	} else {
-		gvr, _, err = explain.SplitAndParseResourceRequest(kind, o.Mapper)
+		gvr, _, err = explain.SplitAndParseResourceRequest(name, o.Mapper)
 	}
 	if err != nil {
-		return schema.GroupVersionKind{}, fmt.Errorf("get the group version resource by %s %s: %w", o.APIVersion, kind, err)
+		return schema.GroupVersionKind{}, fmt.Errorf("get the group version resource by %s %s: %w", o.APIVersion, name, err)
 	}
 
 	gvk, err := o.Mapper.KindFor(gvr)

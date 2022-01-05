@@ -18,24 +18,24 @@ func TestOptions_gvk(t *testing.T) {
 	defer factory.Cleanup()
 	mapper, _ := factory.ToRESTMapper()
 	tests := []struct {
-		apiVersion string
-		kind       string
-		want       schema.GroupVersionKind
-		wantErr    string
+		apiVersion   string
+		resourceName string
+		want         schema.GroupVersionKind
+		wantErr      string
 	}{
 		{
-			apiVersion: "v1",
-			kind:       "hoge",
-			want:       schema.GroupVersionKind{},
-			wantErr:    "get the group version resource by v1 hoge: no matches for /, Resource=hoge",
+			apiVersion:   "v1",
+			resourceName: "hoge",
+			want:         schema.GroupVersionKind{},
+			wantErr:      "get the group version resource by v1 hoge: no matches for /, Resource=hoge",
 		},
 		{
-			kind:    "hoge",
-			want:    schema.GroupVersionKind{},
-			wantErr: "get the group version resource by  hoge: no matches for /, Resource=hoge",
+			resourceName: "hoge",
+			want:         schema.GroupVersionKind{},
+			wantErr:      "get the group version resource by  hoge: no matches for /, Resource=hoge",
 		},
 		{
-			kind: "pod",
+			resourceName: "pod",
 			want: schema.GroupVersionKind{
 				Group:   "",
 				Version: "v1",
@@ -43,8 +43,8 @@ func TestOptions_gvk(t *testing.T) {
 			},
 		},
 		{
-			apiVersion: "v1",
-			kind:       "pod",
+			apiVersion:   "v1",
+			resourceName: "pod",
 			want: schema.GroupVersionKind{
 				Group:   "",
 				Version: "v1",
@@ -53,12 +53,12 @@ func TestOptions_gvk(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		t.Run(fmt.Sprintf("Get gvk by %s %s", tt.apiVersion, tt.kind), func(t *testing.T) {
+		t.Run(fmt.Sprintf("Get gvk by %s %s", tt.apiVersion, tt.resourceName), func(t *testing.T) {
 			o := &Options{
 				APIVersion: tt.apiVersion,
 				Mapper:     mapper,
 			}
-			got, err := o.gvk(tt.kind)
+			got, err := o.gvk(tt.resourceName)
 			if tt.wantErr == "" {
 				assert.Nil(t, err)
 			} else {
