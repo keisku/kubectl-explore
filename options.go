@@ -28,7 +28,6 @@ type Options struct {
 }
 
 func NewCmd() *cobra.Command {
-	f := cmdutil.NewFactory(genericclioptions.NewConfigFlags(true))
 	o := NewOptions(genericclioptions.IOStreams{
 		In:     os.Stdin,
 		Out:    os.Stdout,
@@ -37,29 +36,41 @@ func NewCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use: "kubectl explore RESOURCE [options]",
-		Long: `This command finds fields associated with each supported API resource to explain.
+		Long: `This command fuzzy-find and explain fields associated with each supported API resource.
 
 Fields are identified via a simple JSONPath identifier:
 	<type>.<fieldName>[.<fieldName>]
 `,
 		Short: "Find documentation for a resource to explain.",
 		Example: `
-# Explore pod fields.
+# Explore the resource selected by fuzzy-finder.
+kubectl explore
+
+# Explore "pod" fields.
 kubectl explore pod
 
 # Explore "pod.spec.containers" fields.
 kubectl explore pod.spec.containers
 
-# Explore the resource selected by interactive fuzzy-finder.
-kubectl explore
+# Explore fields in the selected context.
+kubectl explore --context=onecontext
 `,
-		Run: func(_ *cobra.Command, args []string) {
-			cmdutil.CheckErr(o.Complete(f))
-			cmdutil.CheckErr(o.Validate(args))
-			cmdutil.CheckErr(o.Run(args))
-		},
 	}
 	cmd.Flags().StringVar(&o.APIVersion, "api-version", o.APIVersion, "Get different explanations for particular API version (API group/version)")
+	// Use default flags from
+	// https://github.com/kubernetes/kubectl/blob/e4426be7778f13d7b8122eee72132ddd089d1397/pkg/cmd/cmd.go#L297
+	kubeConfigFlags := genericclioptions.NewConfigFlags(true).WithDeprecatedPasswordFlag().WithDiscoveryBurst(300).WithDiscoveryQPS(50.0)
+	flags := cmd.PersistentFlags()
+	kubeConfigFlags.AddFlags(flags)
+	matchVersionKubeConfigFlags := cmdutil.NewMatchVersionFlags(kubeConfigFlags)
+	matchVersionKubeConfigFlags.AddFlags(flags)
+	f := cmdutil.NewFactory(matchVersionKubeConfigFlags)
+
+	cmd.Run = func(_ *cobra.Command, args []string) {
+		cmdutil.CheckErr(o.Complete(f))
+		cmdutil.CheckErr(o.Validate(args))
+		cmdutil.CheckErr(o.Run(args))
+	}
 	return cmd
 }
 
