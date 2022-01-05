@@ -62,6 +62,9 @@ func (e *Explorer) Explore(w io.Writer) error {
 // Define this func as a variable for overwriting when tests.
 var getPathToExplain = func(e *Explorer) (string, error) {
 	paths := e.paths()
+	if len(paths) == 0 {
+		return "", nil
+	}
 	if len(paths) == 1 {
 		return paths[0], nil
 	}
@@ -97,6 +100,10 @@ func (e *Explorer) paths() []string {
 
 // explain explains the field associated with the given path.
 func (e *Explorer) explain(w io.Writer, path string) error {
+	// This is the case that selected resource doesn't have any fields to explain.
+	if path == "" {
+		return explain.PrintModelDescription([]string{}, w, e.schemaByGvk, e.gvk, false)
+	}
 	// This is the case that path specifies the top-level field,
 	// for example, "pod.spec", "pod.metadata"
 	if strings.Count(path, ".") == 1 {
