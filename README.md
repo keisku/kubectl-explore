@@ -72,7 +72,7 @@ Download the binary from [GitHub Releases](https://github.com/kei6u/kubectl-expl
 ### Linux
 
 ```shell
-curl -L -o kubectl-explore.tar.gz https://github.com/kei6u/kubectl-explore/releases/download/v0.3.2-beta.1/kubectl-explore_v0.3.2-beta.1_linux_amd64.tar.gz
+curl -L -o kubectl-explore.tar.gz https://github.com/kei6u/kubectl-explore/releases/download/v0.3.2/kubectl-explore_v0.3.2_linux_amd64.tar.gz
 tar -xvf kubectl-explore.tar.gz
 sudo mv kubectl-explore /usr/local/bin
 ```
@@ -80,7 +80,7 @@ sudo mv kubectl-explore /usr/local/bin
 ### Darwin(amd64)
 
 ```shell
-curl -L -o kubectl-explore.tar.gz https://github.com/kei6u/kubectl-explore/releases/download/v0.3.2-beta.1/kubectl-explore_v0.3.2-beta.1_darwin_amd64.tar.gz
+curl -L -o kubectl-explore.tar.gz https://github.com/kei6u/kubectl-explore/releases/download/v0.3.2/kubectl-explore_v0.3.2_darwin_amd64.tar.gz
 tar -xvf kubectl-explore.tar.gz
 sudo mv kubectl-explore /usr/local/bin
 ```
@@ -88,7 +88,7 @@ sudo mv kubectl-explore /usr/local/bin
 ### Darwin(arm64)
 
 ```shell
-curl -L -o kubectl-explore.tar.gz https://github.com/kei6u/kubectl-explore/releases/download/v0.3.2-beta.1/kubectl-explore_v0.3.2-beta.1_darwin_arm64.tar.gz
+curl -L -o kubectl-explore.tar.gz https://github.com/kei6u/kubectl-explore/releases/download/v0.3.2/kubectl-explore_v0.3.2_darwin_arm64.tar.gz
 tar -xvf kubectl-explore.tar.gz
 sudo mv kubectl-explore /usr/local/bin
 ```
