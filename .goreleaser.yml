@@ -1,25 +1,27 @@
-project_name: kubectl-explore
 before:
   hooks:
-    - go mod tidy
+  - go mod download
 builds:
-  - binary: kubectl-explore
-    ldflags:
-      - -s -w
-      - -X main.Version={{.Version}}
-      - -X main.Revision={{.ShortCommit}}
-    env:
-      - CGO_ENABLED=0
+- id: kubectl-explore
+  binary: kubectl-explore
+  env:
+  - CGO_ENABLED=0
+  goos:
+  - linux
+  - darwin
+  - windows
+  goarch:
+  - amd64
+  - arm64
+  ignore:
+  - goos: windows
+    goarch: arm64
+
 archives:
-  - name_template: '{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}'
-    replacements:
-      darwin: darwin
-      linux: linux
-      windows: windows
-      386: i386
-      amd64: x86_64
-    format_overrides:
-      - goos: windows
-        format: zip
-release:
-  prerelease: auto
+- builds:
+  - kubectl-explore
+  name_template: "{{ .ProjectName }}_{{ .Tag }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
+  wrap_in_directory: "false"
+  format: tar.gz
+  files:
+  - LICENSE
