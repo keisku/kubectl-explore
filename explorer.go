@@ -71,7 +71,14 @@ var getPathToExplain = func(e *Explorer) (string, error) {
 	idx, err := fuzzyfinder.Find(
 		paths,
 		func(i int) string { return paths[i] },
-		fuzzyfinder.WithPreviewWindow(func(i, width, height int) string {
+		fuzzyfinder.WithPreviewWindow(func(i, _, _ int) string {
+			// Prevent panic when no previews.
+			// When the search result of fuzzy-find is 0, there is nothing to preview.
+			// Then, index as a callback argument is -1.
+			// https://github.com/ktr0731/go-fuzzyfinder/blob/3cbd4a4d9c88fe437ece2cbf91fbaf2fa0aa665f/fuzzyfinder.go#L270-L272
+			if i < 0 {
+				return ""
+			}
 			var w bytes.Buffer
 			if err := e.explain(&w, paths[i]); err != nil {
 				return fmt.Sprintf("preview is broken: %s", err)
