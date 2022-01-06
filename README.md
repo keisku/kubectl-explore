@@ -66,42 +66,54 @@ Flags:
       --username string                Username for basic authentication to the API server
 ```
 
-## Install
+## Installation
+
+### Krew
+
+Use [krew](https://krew.sigs.k8s.io/) plugin manager to install.
+See [the guide](https://krew.sigs.k8s.io/docs/user-guide/setup/install/) to install [krew](https://krew.sigs.k8s.io/).
+
+```bash
+kubectl krew install explore
+kubectl explore --help
+```
+
+### Download the binary
 
 Download the binary from [GitHub Releases](https://github.com/kei6u/kubectl-explore/releases) and drop it in your `$PATH`.
 
-### Linux
+#### Linux
 
 ```shell
-curl -L -o kubectl-explore.tar.gz https://github.com/kei6u/kubectl-explore/releases/download/v0.3.2/kubectl-explore_v0.3.2_linux_amd64.tar.gz
+curl -L -o kubectl-explore.tar.gz https://github.com/kei6u/kubectl-explore/releases/download/v0.3.3/kubectl-explore_v0.3.3_linux_amd64.tar.gz
 tar -xvf kubectl-explore.tar.gz
 sudo mv kubectl-explore /usr/local/bin
 ```
 
-### Darwin(amd64)
+#### Darwin(amd64)
 
 ```shell
-curl -L -o kubectl-explore.tar.gz https://github.com/kei6u/kubectl-explore/releases/download/v0.3.2/kubectl-explore_v0.3.2_darwin_amd64.tar.gz
+curl -L -o kubectl-explore.tar.gz https://github.com/kei6u/kubectl-explore/releases/download/v0.3.3/kubectl-explore_v0.3.3_darwin_amd64.tar.gz
 tar -xvf kubectl-explore.tar.gz
 sudo mv kubectl-explore /usr/local/bin
 ```
 
-### Darwin(arm64)
+#### Darwin(arm64)
 
 ```shell
-curl -L -o kubectl-explore.tar.gz https://github.com/kei6u/kubectl-explore/releases/download/v0.3.2/kubectl-explore_v0.3.2_darwin_arm64.tar.gz
+curl -L -o kubectl-explore.tar.gz https://github.com/kei6u/kubectl-explore/releases/download/v0.3.3/kubectl-explore_v0.3.3_darwin_arm64.tar.gz
 tar -xvf kubectl-explore.tar.gz
 sudo mv kubectl-explore /usr/local/bin
 ```
 
-### Source
+#### Source
 
 ```shell
 go install github.com/kei6u/kubectl-explore@latest
 sudo mv $GOPATH/bin/kubectl-explore /usr/local/bin
 ```
 
-### Validation
+#### Validation
 
 Validate if `kubectl explore` can be executed.
 [The Kubernetes documentation](https://kubernetes.io/docs/tasks/extend-kubectl/kubectl-plugins/#using-a-plugin) explains how to use a plugin.
