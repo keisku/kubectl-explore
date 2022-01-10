@@ -12,7 +12,8 @@ This is a plugin for `kubectl` to fuzzy-find and explain the field supported API
 
 ## Motivation
 
-`kubectl explain` is already helpful, but typing the accurate path to the filed is a tedious and typo-prone.
+- `kubectl explain` needs knowing in advance the resources name/fields.
+- `kubectl explain` is already helpful, but typing the accurate path to the filed is a tedious and typo-prone.
 
 ## Usage
 
