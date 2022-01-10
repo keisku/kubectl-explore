@@ -110,60 +110,72 @@ func (o *Options) Run(args []string) error {
 	if 0 < len(args) {
 		inputFieldPath = args[0]
 	}
-	name, err := o.getResourceName(args)
+	var resource string
+	if len(args) == 1 {
+		resource = args[0]
+	}
+	var gvk schema.GroupVersionKind
+	var err error
+	if resource == "" {
+		gvk, err = o.findGVK()
+	} else {
+		gvk, err = o.getGVK(strings.Split(resource, ".")[0])
+	}
 	if err != nil {
 		return err
 	}
-	gvk, err := o.gvk(name)
-	if err != nil {
-		return err
-	}
-	e, err := NewExplorer(inputFieldPath, name, o.Schema, gvk)
+	e, err := NewExplorer(inputFieldPath, strings.ToLower(gvk.Kind), o.Schema, gvk)
 	if err != nil {
 		return err
 	}
 	return e.Explore(o.Out)
 }
 
-func (o *Options) getResourceName(args []string) (string, error) {
-	var inResource string
-	if len(args) == 1 {
-		inResource = args[0]
+func (o *Options) findGVK() (schema.GroupVersionKind, error) {
+	gvks, err := o.listGVKs()
+	if err != nil {
+		return schema.GroupVersionKind{}, err
 	}
-	var name string
-	if inResource == "" {
-		names, err := allAPIResourceNames(o.Discovery)
-		if err != nil {
-			return "", err
+	idx, err := fuzzyfinder.Find(gvks, func(i int) string {
+		return strings.ToLower(gvks[i].Kind)
+	}, fuzzyfinder.WithPreviewWindow(func(i, _, _ int) string {
+		if i < 0 {
+			return ""
 		}
-		idx, err := fuzzyfinder.Find(names, func(i int) string {
-			return strings.ToLower(names[i])
-		})
-		if err != nil {
-			return "", fmt.Errorf("fuzzy find the API resource: %w", err)
-		}
-		name = strings.ToLower(names[idx])
-	} else {
-		name = strings.Split(inResource, ".")[0]
+		return gvks[i].String()
+	}))
+	if err != nil {
+		return schema.GroupVersionKind{}, fmt.Errorf("fuzzy find the API resource: %w", err)
 	}
-	return name, nil
+	return gvks[idx], nil
 }
 
-func allAPIResourceNames(discovery discovery.CachedDiscoveryInterface) ([]string, error) {
-	resourceList, err := discovery.ServerPreferredResources()
+func (o *Options) listGVKs() ([]schema.GroupVersionKind, error) {
+	resourceList, err := o.Discovery.ServerPreferredResources()
 	if err != nil {
 		return nil, fmt.Errorf("get all API resources: %w", err)
 	}
-	var names []string
+	var gvks []schema.GroupVersionKind
 	for _, list := range resourceList {
+		if len(list.APIResources) == 0 {
+			continue
+		}
+		gv, err := schema.ParseGroupVersion(list.GroupVersion)
+		if err != nil {
+			continue
+		}
 		for _, r := range list.APIResources {
-			names = append(names, r.Name)
+			gvks = append(gvks, schema.GroupVersionKind{
+				Group:   gv.Group,
+				Version: gv.Version,
+				Kind:    r.Kind,
+			})
 		}
 	}
-	return names, nil
+	return gvks, nil
 }
 
-func (o *Options) gvk(name string) (schema.GroupVersionKind, error) {
+func (o *Options) getGVK(name string) (schema.GroupVersionKind, error) {
 	var gvr schema.GroupVersionResource
 	var err error
 	if len(o.APIVersion) == 0 {

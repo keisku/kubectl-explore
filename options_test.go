@@ -8,12 +8,28 @@ import (
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/rest/fake"
 	cmdtesting "k8s.io/kubectl/pkg/cmd/testing"
 	"k8s.io/kubectl/pkg/scheme"
 )
 
-func TestOptions_gvk(t *testing.T) {
+func newFactory(t *testing.T) *cmdtesting.TestFactory {
+	t.Helper()
+
+	factory := cmdtesting.NewTestFactory().WithNamespace("test")
+	factory.Client = &fake.RESTClient{
+		NegotiatedSerializer: scheme.Codecs.WithoutConversion(),
+		GroupVersion:         corev1.SchemeGroupVersion,
+		Client: fake.CreateHTTPClient(func(req *http.Request) (*http.Response, error) {
+			return nil, fmt.Errorf("request url: %#v, and request: %#v", req.URL, req)
+		}),
+	}
+	factory.ClientConfigVal = cmdtesting.DefaultClientConfig()
+	return factory
+}
+
+func TestOptions_getGVK(t *testing.T) {
 	factory := newFactory(t)
 	defer factory.Cleanup()
 	mapper, _ := factory.ToRESTMapper()
@@ -58,7 +74,7 @@ func TestOptions_gvk(t *testing.T) {
 				APIVersion: tt.apiVersion,
 				Mapper:     mapper,
 			}
-			got, err := o.gvk(tt.resourceName)
+			got, err := o.getGVK(tt.resourceName)
 			if tt.wantErr == "" {
 				assert.Nil(t, err)
 			} else {
@@ -67,19 +83,4 @@ func TestOptions_gvk(t *testing.T) {
 			assert.Equal(t, tt.want, got)
 		})
 	}
-}
-
-func newFactory(t *testing.T) *cmdtesting.TestFactory {
-	t.Helper()
-
-	factory := cmdtesting.NewTestFactory().WithNamespace("test")
-	factory.Client = &fake.RESTClient{
-		NegotiatedSerializer: scheme.Codecs.WithoutConversion(),
-		GroupVersion:         corev1.SchemeGroupVersion,
-		Client: fake.CreateHTTPClient(func(req *http.Request) (*http.Response, error) {
-			return nil, fmt.Errorf("request url: %#v, and request: %#v", req.URL, req)
-		}),
-	}
-	factory.ClientConfigVal = cmdtesting.DefaultClientConfig()
-	return factory
 }
