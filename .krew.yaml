@@ -14,29 +14,29 @@ spec:
       matchLabels:
         os: darwin
         arch: amd64
-    {{addURIAndSha "https://github.com/kei6u/kubectl-explore/releases/download/{{ .TagName }}/kubectl-explore{{ .TagName }}_darwin_amd64.tar.gz" .TagName }}
+    {{addURIAndSha "https://github.com/kei6u/kubectl-explore/releases/download/{{ .TagName }}/kubectl-explore_{{ .TagName }}_darwin_amd64.tar.gz" .TagName }}
     bin: kubectl-explore
   - selector:
       matchLabels:
         os: darwin
         arch: arm64
-    {{addURIAndSha "https://github.com/kei6u/kubectl-explore/releases/download/{{ .TagName }}/kubectl-explore{{ .TagName }}_darwin_arm64.tar.gz" .TagName }}
+    {{addURIAndSha "https://github.com/kei6u/kubectl-explore/releases/download/{{ .TagName }}/kubectl-explore_{{ .TagName }}_darwin_arm64.tar.gz" .TagName }}
     bin: kubectl-explore
   - selector:
       matchLabels:
         os: linux
         arch: amd64
-    {{addURIAndSha "https://github.com/kei6u/kubectl-explore/releases/download/{{ .TagName }}/kubectl-explore{{ .TagName }}_linux_amd64.tar.gz" .TagName }}
+    {{addURIAndSha "https://github.com/kei6u/kubectl-explore/releases/download/{{ .TagName }}/kubectl-explore_{{ .TagName }}_linux_amd64.tar.gz" .TagName }}
     bin: kubectl-explore
   - selector:
       matchLabels:
         os: linux
         arch: arm64
-    {{addURIAndSha "https://github.com/kei6u/kubectl-explore/releases/download/{{ .TagName }}/kubectl-explore{{ .TagName }}_linux_arm64.tar.gz" .TagName }}
+    {{addURIAndSha "https://github.com/kei6u/kubectl-explore/releases/download/{{ .TagName }}/kubectl-explore_{{ .TagName }}_linux_arm64.tar.gz" .TagName }}
     bin: kubectl-explore
   - selector:
       matchLabels:
         os: windows
         arch: amd64
-    {{addURIAndSha "https://github.com/kei6u/kubectl-explore/releases/download/{{ .TagName }}/kubectl-explore{{ .TagName }}_windows_amd64.tar.gz" .TagName }}
+    {{addURIAndSha "https://github.com/kei6u/kubectl-explore/releases/download/{{ .TagName }}/kubectl-explore_{{ .TagName }}_windows_amd64.tar.gz" .TagName }}
     bin: kubectl-explore.exe
