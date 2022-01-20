@@ -43,16 +43,16 @@ Fields are identified via a simple JSONPath identifier:
 `,
 		Short: "Find the explanation for a resource or its field.",
 		Example: `
-# Find the the field explanation from supported API resources.
+# Find the field explanation from supported API resources.
 kubectl explore
 
-# Find the the field explanation from "pod"
+# Find the field explanation from "pod"
 kubectl explore pod
 
-# Find the the field explanation from "node.spec"
+# Find the field explanation from "node.spec"
 kubectl explore pod.spec.containers
 
-# Find the the field explanation from supported API resources in the selected cluster.
+# Find the field explanation from supported API resources in the selected cluster.
 kubectl explore --context=onecontext
 `,
 	}

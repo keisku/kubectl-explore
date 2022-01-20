@@ -24,16 +24,16 @@ Usage:
 
 Examples:
 
-# Find the the field explanation from supported API resources.
+# Find the field explanation from supported API resources.
 kubectl explore
 
-# Find the the field explanation from "pod"
+# Find the field explanation from "pod"
 kubectl explore pod
 
-# Find the the field explanation from "node.spec"
+# Find the field explanation from "node.spec"
 kubectl explore pod.spec.containers
 
-# Find the the field explanation from supported API resources in the selected cluster.
+# Find the field explanation from supported API resources in the selected cluster.
 kubectl explore --context=onecontext
 
 Flags:
@@ -80,7 +80,7 @@ Download the binary from [GitHub Releases](https://github.com/kei6u/kubectl-expl
 #### Linux
 
 ```shell
-curl -L -o kubectl-explore.tar.gz https://github.com/kei6u/kubectl-explore/releases/download/v0.4.1/kubectl-explore_v0.4.1_linux_amd64.tar.gz
+curl -L -o kubectl-explore.tar.gz https://github.com/kei6u/kubectl-explore/releases/download/v0.4.4/kubectl-explore_v0.4.4_linux_amd64.tar.gz
 tar -xvf kubectl-explore.tar.gz
 sudo mv kubectl-explore /usr/local/bin
 ```
@@ -88,7 +88,7 @@ sudo mv kubectl-explore /usr/local/bin
 #### Darwin(amd64)
 
 ```shell
-curl -L -o kubectl-explore.tar.gz https://github.com/kei6u/kubectl-explore/releases/download/v0.4.1/kubectl-explore_v0.4.1_darwin_amd64.tar.gz
+curl -L -o kubectl-explore.tar.gz https://github.com/kei6u/kubectl-explore/releases/download/v0.4.4/kubectl-explore_v0.4.4_darwin_amd64.tar.gz
 tar -xvf kubectl-explore.tar.gz
 sudo mv kubectl-explore /usr/local/bin
 ```
@@ -96,7 +96,7 @@ sudo mv kubectl-explore /usr/local/bin
 #### Darwin(arm64)
 
 ```shell
-curl -L -o kubectl-explore.tar.gz https://github.com/kei6u/kubectl-explore/releases/download/v0.4.1/kubectl-explore_v0.4.1_darwin_arm64.tar.gz
+curl -L -o kubectl-explore.tar.gz https://github.com/kei6u/kubectl-explore/releases/download/v0.4.4/kubectl-explore_v0.4.4_darwin_arm64.tar.gz
 tar -xvf kubectl-explore.tar.gz
 sudo mv kubectl-explore /usr/local/bin
 ```
