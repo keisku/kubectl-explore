@@ -11,7 +11,7 @@ This is a `kubectl` plugin to fuzzy-find the field explanation from supported AP
 ## Motivation
 
 - `kubectl explain` needs knowing in advance the resources name/fields.
-- `kubectl explain` is already helpful, but typing the accurate path to the filed is a tedious and typo-prone.
+- `kubectl explain` needs typing the accurate path to the resource name/field, which is a tedious and typo-prone.
 
 ## Usage
 
