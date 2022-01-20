@@ -36,23 +36,23 @@ func NewCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use: "kubectl explore RESOURCE [options]",
-		Long: `This command fuzzy-find and explain fields associated with each supported API resource.
+		Long: `This command fuzzy-finds the explanaton the field from supported API resources.
 
 Fields are identified via a simple JSONPath identifier:
 	<type>.<fieldName>[.<fieldName>]
 `,
-		Short: "Find documentation for a resource to explain.",
+		Short: "Find the explanation for a resource or its field.",
 		Example: `
-# Explore the resource selected by fuzzy-finder.
+# Find the the field explanation from supported API resources.
 kubectl explore
 
-# Explore "pod" fields.
+# Find the the field explanation from "pod"
 kubectl explore pod
 
-# Explore "pod.spec.containers" fields.
+# Find the the field explanation from "node.spec"
 kubectl explore pod.spec.containers
 
-# Explore fields in the selected context.
+# Find the the field explanation from supported API resources in the selected cluster.
 kubectl explore --context=onecontext
 `,
 	}

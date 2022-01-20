@@ -2,13 +2,11 @@
 
 [![.github/workflows/test.yaml](https://github.com/kei6u/kubectl-explore/actions/workflows/go_test.yaml/badge.svg)](https://github.com/kei6u/kubectl-explore/actions/workflows/go_test.yaml)
 
-This is a plugin for `kubectl` to fuzzy-find and explain the field supported API resource.
-
 ![demo](./demo.gif)
 
 ## What
 
-`kubectl-explore` finds and explains the field associated with each supported API resource.
+This is a `kubectl` plugin to fuzzy-find the field explanation from supported API resources.
 
 ## Motivation
 
@@ -18,8 +16,6 @@ This is a plugin for `kubectl` to fuzzy-find and explain the field supported API
 ## Usage
 
 ```
-This command fuzzy-find and explain fields associated with each supported API resource.
-
 Fields are identified via a simple JSONPath identifier:
         <type>.<fieldName>[.<fieldName>]
 
@@ -28,18 +24,17 @@ Usage:
 
 Examples:
 
-# Explore the resource selected by fuzzy-finder.
+# Find the the field explanation from supported API resources.
 kubectl explore
 
-# Explore "pod" fields.
+# Find the the field explanation from "pod"
 kubectl explore pod
 
-# Explore "pod.spec.containers" fields.
+# Find the the field explanation from "node.spec"
 kubectl explore pod.spec.containers
 
-# Explore fields in the selected context.
+# Find the the field explanation from supported API resources in the selected cluster.
 kubectl explore --context=onecontext
-
 
 Flags:
       --api-version string             Get different explanations for particular API version (API group/version)
