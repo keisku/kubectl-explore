@@ -8,6 +8,11 @@
 
 This is a `kubectl` plugin to fuzzy-find the field explanation from supported API resources.
 
+### See also
+
+- [kubectl explore, a better kubectl explain](https://kei6u.medium.com/kubectl-explore-a-better-kubectl-explain-46a939fafe3a)
+- [kubectl explain にあいまい検索(fuzzy-find)機能を追加したプラグイン kubectl-explore を作った](https://zenn.dev/kskumgk63/articles/d52be6c4a31bbb)
+
 ## Motivation
 
 - `kubectl explain` needs knowing in advance the resources name/fields.
