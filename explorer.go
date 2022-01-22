@@ -14,8 +14,6 @@ import (
 	"k8s.io/kubectl/pkg/util/openapi"
 )
 
-var _ proto.SchemaVisitor = (*Explorer)(nil)
-
 // Explorer fields associated with each supported API resource to explain.
 type Explorer struct {
 	openAPISchema  openapi.Resources
@@ -43,7 +41,7 @@ func NewExplorer(fieldPath, kind string, r openapi.Resources, gvk schema.GroupVe
 	}, nil
 }
 
-// Explore finds the field to explain it.
+// Explore finds the field explanation, for example "pod.spec", "cronJob.spec.jobTemplate", etc.
 func (e *Explorer) Explore(w io.Writer) error {
 	e.schemaByGvk.Accept(e)
 	if e.err != nil {
@@ -133,6 +131,8 @@ func (e *Explorer) explain(w io.Writer, path string) error {
 	}
 	return nil
 }
+
+var _ proto.SchemaVisitor = (*Explorer)(nil)
 
 func (e *Explorer) VisitKind(k *proto.Kind) {
 	keys := k.Keys()
