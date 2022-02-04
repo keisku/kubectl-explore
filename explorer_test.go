@@ -144,14 +144,14 @@ FIELDS:
 	}
 }
 
-const urlToSaggerJsonFormat = "https://raw.githubusercontent.com/kubernetes/kubernetes/release-%s/api/openapi-spec/swagger.json"
+const urlToSwaggerJsonFormat = "https://raw.githubusercontent.com/kubernetes/kubernetes/release-%s/api/openapi-spec/swagger.json"
 const swaggerJsonVersion = "1.23"
 
 // fetchOpenAPIResources fetches swagger.json from the Kubernetes release on GitHub.
 func fetchOpenAPIResources(t *testing.T) openapi.Resources {
 	t.Helper()
 
-	resp, err := http.DefaultClient.Get(fmt.Sprintf(urlToSaggerJsonFormat, swaggerJsonVersion))
+	resp, err := http.DefaultClient.Get(fmt.Sprintf(urlToSwaggerJsonFormat, swaggerJsonVersion))
 	if err != nil {
 		t.Fatalf("fetch swagger.json: %s", err)
 		return nil
