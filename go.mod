@@ -1,4 +1,4 @@
-module github.com/kei6u/kubectl-explore
+module github.com/keisku/kubectl-explore
 
 go 1.17
 

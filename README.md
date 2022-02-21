@@ -1,6 +1,6 @@
 # kubectl-explore
 
-[![.github/workflows/test.yaml](https://github.com/kei6u/kubectl-explore/actions/workflows/go_test.yaml/badge.svg)](https://github.com/kei6u/kubectl-explore/actions/workflows/go_test.yaml)
+[![.github/workflows/test.yaml](https://github.com/keisku/kubectl-explore/actions/workflows/go_test.yaml/badge.svg)](https://github.com/keisku/kubectl-explore/actions/workflows/go_test.yaml)
 
 ![demo](./demo.gif)
 
@@ -10,7 +10,7 @@ This is a `kubectl` plugin to fuzzy-find the field explanation from supported AP
 
 ### See also
 
-- [kubectl explore, a better kubectl explain](https://kei6u.medium.com/kubectl-explore-a-better-kubectl-explain-46a939fafe3a)
+- [kubectl explore, a better kubectl explain](https://keisku.medium.com/kubectl-explore-a-better-kubectl-explain-46a939fafe3a)
 - [kubectl explain にあいまい検索(fuzzy-find)機能を追加したプラグイン kubectl-explore を作った](https://zenn.dev/kskumgk63/articles/d52be6c4a31bbb)
 
 ## Motivation
@@ -80,12 +80,12 @@ kubectl explore --help
 
 ### Download the binary
 
-Download the binary from [GitHub Releases](https://github.com/kei6u/kubectl-explore/releases) and drop it in your `$PATH`.
+Download the binary from [GitHub Releases](https://github.com/keisku/kubectl-explore/releases) and drop it in your `$PATH`.
 
 #### Linux
 
 ```shell
-curl -L -o kubectl-explore.tar.gz https://github.com/kei6u/kubectl-explore/releases/download/v0.4.5/kubectl-explore_v0.4.5_linux_amd64.tar.gz
+curl -L -o kubectl-explore.tar.gz https://github.com/keisku/kubectl-explore/releases/download/v0.4.5/kubectl-explore_v0.4.5_linux_amd64.tar.gz
 tar -xvf kubectl-explore.tar.gz
 sudo mv kubectl-explore /usr/local/bin
 ```
@@ -93,7 +93,7 @@ sudo mv kubectl-explore /usr/local/bin
 #### Darwin(amd64)
 
 ```shell
-curl -L -o kubectl-explore.tar.gz https://github.com/kei6u/kubectl-explore/releases/download/v0.4.5/kubectl-explore_v0.4.5_darwin_amd64.tar.gz
+curl -L -o kubectl-explore.tar.gz https://github.com/keisku/kubectl-explore/releases/download/v0.4.5/kubectl-explore_v0.4.5_darwin_amd64.tar.gz
 tar -xvf kubectl-explore.tar.gz
 sudo mv kubectl-explore /usr/local/bin
 ```
@@ -101,7 +101,7 @@ sudo mv kubectl-explore /usr/local/bin
 #### Darwin(arm64)
 
 ```shell
-curl -L -o kubectl-explore.tar.gz https://github.com/kei6u/kubectl-explore/releases/download/v0.4.5/kubectl-explore_v0.4.5_darwin_arm64.tar.gz
+curl -L -o kubectl-explore.tar.gz https://github.com/keisku/kubectl-explore/releases/download/v0.4.5/kubectl-explore_v0.4.5_darwin_arm64.tar.gz
 tar -xvf kubectl-explore.tar.gz
 sudo mv kubectl-explore /usr/local/bin
 ```
@@ -109,7 +109,7 @@ sudo mv kubectl-explore /usr/local/bin
 #### Source
 
 ```shell
-go install github.com/kei6u/kubectl-explore@latest
+go install github.com/keisku/kubectl-explore@latest
 sudo mv $GOPATH/bin/kubectl-explore /usr/local/bin
 ```
 
