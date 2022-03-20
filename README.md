@@ -85,7 +85,7 @@ Download the binary from [GitHub Releases](https://github.com/keisku/kubectl-exp
 #### Linux
 
 ```shell
-curl -L -o kubectl-explore.tar.gz https://github.com/keisku/kubectl-explore/releases/download/v0.4.5/kubectl-explore_v0.4.5_linux_amd64.tar.gz
+curl -L -o kubectl-explore.tar.gz https://github.com/keisku/kubectl-explore/releases/download/v0.5.0/kubectl-explore_v0.5.0_linux_amd64.tar.gz
 tar -xvf kubectl-explore.tar.gz
 sudo mv kubectl-explore /usr/local/bin
 ```
@@ -93,7 +93,7 @@ sudo mv kubectl-explore /usr/local/bin
 #### Darwin(amd64)
 
 ```shell
-curl -L -o kubectl-explore.tar.gz https://github.com/keisku/kubectl-explore/releases/download/v0.4.5/kubectl-explore_v0.4.5_darwin_amd64.tar.gz
+curl -L -o kubectl-explore.tar.gz https://github.com/keisku/kubectl-explore/releases/download/v0.5.0/kubectl-explore_v0.5.0_darwin_amd64.tar.gz
 tar -xvf kubectl-explore.tar.gz
 sudo mv kubectl-explore /usr/local/bin
 ```
@@ -101,7 +101,7 @@ sudo mv kubectl-explore /usr/local/bin
 #### Darwin(arm64)
 
 ```shell
-curl -L -o kubectl-explore.tar.gz https://github.com/keisku/kubectl-explore/releases/download/v0.4.5/kubectl-explore_v0.4.5_darwin_arm64.tar.gz
+curl -L -o kubectl-explore.tar.gz https://github.com/keisku/kubectl-explore/releases/download/v0.5.0/kubectl-explore_v0.5.0_darwin_arm64.tar.gz
 tar -xvf kubectl-explore.tar.gz
 sudo mv kubectl-explore /usr/local/bin
 ```
