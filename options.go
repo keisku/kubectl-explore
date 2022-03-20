@@ -41,18 +41,18 @@ func NewCmd() *cobra.Command {
 Fields are identified via a simple JSONPath identifier:
 	<type>.<fieldName>[.<fieldName>]
 `,
-		Short: "Find the explanation for a resource or its field.",
+		Short: "Fuzzy-find the explanation for a resource or its field.",
 		Example: `
-# Find the field explanation from supported API resources.
+# Fuzzy-find the field explanation from supported API resources.
 kubectl explore
 
-# Find the field explanation from "pod"
+# Fuzzy-find the field explanation from "pod"
 kubectl explore pod
 
-# Find the field explanation from "node.spec"
+# Fuzzy-find the field explanation from "node.spec"
 kubectl explore pod.spec.containers
 
-# Find the field explanation from supported API resources in the selected cluster.
+# Fuzzy-find the field explanation from supported API resources in the selected cluster.
 kubectl explore --context=onecontext
 `,
 	}
