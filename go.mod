@@ -1,6 +1,6 @@
 module github.com/keisku/kubectl-explore
 
-go 1.17
+go 1.18
 
 require (
 	github.com/googleapis/gnostic v0.5.5
