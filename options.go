@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 
 	"github.com/ktr0731/go-fuzzyfinder"
@@ -150,10 +151,14 @@ func (o *Options) findGVK() (schema.GroupVersionKind, error) {
 	return gvks[idx], nil
 }
 
+// listGVKs returns a list of GroupVersionKinds that is sorted in alphabetical order.
 func (o *Options) listGVKs() ([]schema.GroupVersionKind, error) {
 	resourceList, err := o.Discovery.ServerPreferredResources()
 	if err != nil {
 		return nil, fmt.Errorf("get all API resources: %w", err)
+	}
+	if len(resourceList) == 0 {
+		return nil, fmt.Errorf("API resources are not found")
 	}
 	var gvks []schema.GroupVersionKind
 	for _, list := range resourceList {
@@ -172,6 +177,9 @@ func (o *Options) listGVKs() ([]schema.GroupVersionKind, error) {
 			})
 		}
 	}
+	sort.SliceStable(gvks, func(i, j int) bool {
+		return gvks[i].Kind < gvks[j].Kind
+	})
 	return gvks, nil
 }
 
