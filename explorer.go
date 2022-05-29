@@ -120,14 +120,14 @@ func (e *Explorer) explain(w io.Writer, path string) error {
 	// e.g. "pod.spec.containers.env" -> "pod.spec.containers"
 	parent, ok := e.pathSchema[path[:strings.LastIndex(path, ".")]]
 	if !ok {
-		return fmt.Errorf("%s is not found", path)
+		return fmt.Errorf("%q is not found", path)
 	}
 
 	// get the key from the path.
 	// e.g. "pod.spec.containers.env" -> "env"
 	fieldPath := []string{path[strings.LastIndex(path, ".")+1:]}
 	if err := explain.PrintModelDescription(fieldPath, w, parent, e.gvk, false); err != nil {
-		return fmt.Errorf(`explain "%s": %w`, path, err)
+		return fmt.Errorf("explain %q: %w", path, err)
 	}
 	return nil
 }
