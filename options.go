@@ -36,7 +36,7 @@ func NewCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use: "kubectl explore RESOURCE [options]",
-		Long: `This command fuzzy-finds the explanaton the field from supported API resources.
+		Long: `This command fuzzy-finds the explanation the field from supported API resources.
 
 Fields are identified via a simple JSONPath identifier:
 	<type>.<fieldName>[.<fieldName>]
