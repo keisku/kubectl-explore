@@ -50,7 +50,7 @@ kubectl explore
 # Fuzzy-find the field explanation from "pod"
 kubectl explore pod
 
-# Fuzzy-find the field explanation from "node.spec"
+# Fuzzy-find the field explanation from "pod.spec.containers"
 kubectl explore pod.spec.containers
 
 # Fuzzy-find the field explanation from supported API resources in the selected cluster.
