@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	openapi_v2 "github.com/googleapis/gnostic/openapiv2"
+	openapi_v2 "github.com/google/gnostic/openapiv2"
 	"github.com/stretchr/testify/assert"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/kubectl/pkg/util/openapi"
@@ -86,10 +86,9 @@ DESCRIPTION:
 
 FIELDS:
    configSource	<Object>
-     Deprecated. If specified, the source of the node's configuration. The
-     DynamicKubeletConfig feature gate must be enabled for the Kubelet to use
-     this field. This field is deprecated as of 1.22:
-     https://git.k8s.io/enhancements/keps/sig-node/281-dynamic-kubelet-configuration
+     Deprecated: Previously used to specify the source of the node's
+     configuration for the DynamicKubeletConfig feature. This feature is removed
+     from Kubelets as of 1.24 and will be fully removed in 1.26.
 
    externalID	<string>
      Deprecated. Not all kubelets will set this field. Remove field after 1.13.
@@ -145,7 +144,7 @@ FIELDS:
 }
 
 const urlToSwaggerJsonFormat = "https://raw.githubusercontent.com/kubernetes/kubernetes/release-%s/api/openapi-spec/swagger.json"
-const swaggerJsonVersion = "1.23"
+const swaggerJsonVersion = "1.24"
 
 // fetchOpenAPIResources fetches swagger.json from the Kubernetes release on GitHub.
 func fetchOpenAPIResources(t *testing.T) openapi.Resources {
