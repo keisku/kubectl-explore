@@ -155,7 +155,6 @@ func (e *Explorer) VisitKind(k *proto.Kind) {
 var visitedReferences = map[string]struct{}{}
 
 func (e *Explorer) VisitReference(r proto.Reference) {
-	// fmt.Printf("%+v\n", r)
 	if _, ok := visitedReferences[r.Reference()]; ok {
 		return
 	}
