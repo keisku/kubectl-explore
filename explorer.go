@@ -95,7 +95,7 @@ var getPathToExplain = func(e *Explorer) (string, error) {
 func (e *Explorer) paths() []string {
 	ps := make([]string, 0, len(e.pathSchema))
 	for p := range e.pathSchema {
-		if strings.Contains(p, e.inputFieldPath) {
+		if strings.Contains(p, strings.ToLower(e.inputFieldPath)) {
 			ps = append(ps, p)
 		}
 	}
@@ -155,6 +155,7 @@ func (e *Explorer) VisitKind(k *proto.Kind) {
 var visitedReferences = map[string]struct{}{}
 
 func (e *Explorer) VisitReference(r proto.Reference) {
+	// fmt.Printf("%+v\n", r)
 	if _, ok := visitedReferences[r.Reference()]; ok {
 		return
 	}
