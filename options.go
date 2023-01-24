@@ -125,7 +125,7 @@ func (o *Options) Run(args []string) error {
 	if err != nil {
 		return err
 	}
-	e, err := NewExplorer(inputFieldPath, strings.ToLower(gvk.Kind), o.Schema, gvk)
+	e, err := NewExplorer(inputFieldPath, o.Schema, gvk)
 	if err != nil {
 		return err
 	}

@@ -16,8 +16,12 @@ import (
 
 // Explorer fields associated with each supported API resource to explain.
 type Explorer struct {
-	openAPISchema  openapi.Resources
-	err            error
+	openAPISchema openapi.Resources
+	err           error
+	// inputFieldPath must use the full-formed kind in lower case.
+	// e.g., "hpa.spec" --> "horizontalpodautoscaler.spec"
+	// "deploy.spec.template" --> "deployment.spec.template"
+	// "sts.spec.template" --> "statefulset.spec.template"
 	inputFieldPath string
 	prevPath       string
 	pathSchema     map[string]proto.Schema
@@ -26,19 +30,33 @@ type Explorer struct {
 }
 
 // NewExplorer initializes Explorer.
-func NewExplorer(fieldPath, kind string, r openapi.Resources, gvk schema.GroupVersionKind) (*Explorer, error) {
+func NewExplorer(fieldPath string, r openapi.Resources, gvk schema.GroupVersionKind) (*Explorer, error) {
 	s := r.LookupResource(gvk)
 	if s == nil {
 		return nil, fmt.Errorf("%#v is not found on the Open API schema", gvk)
 	}
+	fullformedKind := strings.ToLower(gvk.Kind)
 	return &Explorer{
 		openAPISchema:  r,
-		inputFieldPath: fieldPath,
-		prevPath:       kind,
+		inputFieldPath: fullformInputFieldPath(fieldPath, fullformedKind),
+		prevPath:       fullformedKind,
 		pathSchema:     make(map[string]proto.Schema),
 		schemaByGvk:    s,
 		gvk:            gvk,
 	}, nil
+}
+
+// Convert abbreviated kind to full-formed.
+func fullformInputFieldPath(inputFieldPath, fullformedKind string) string {
+	if inputFieldPath == "" {
+		return ""
+	}
+	ss := strings.Split(inputFieldPath, ".")
+	if !strings.EqualFold(ss[0], fullformedKind) {
+		ss[0] = fullformedKind
+		return strings.Join(ss, ".")
+	}
+	return inputFieldPath
 }
 
 // Explore finds the field explanation, for example "pod.spec", "cronJob.spec.jobTemplate", etc.
@@ -95,7 +113,7 @@ var getPathToExplain = func(e *Explorer) (string, error) {
 func (e *Explorer) paths() []string {
 	ps := make([]string, 0, len(e.pathSchema))
 	for p := range e.pathSchema {
-		if strings.Contains(p, strings.ToLower(e.inputFieldPath)) {
+		if strings.Contains(p, e.inputFieldPath) {
 			ps = append(ps, p)
 		}
 	}
