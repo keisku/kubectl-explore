@@ -84,38 +84,19 @@ kubectl explore --help
 
 Download the binary from [GitHub Releases](https://github.com/keisku/kubectl-explore/releases) and drop it in your `$PATH`.
 
-#### Linux
-
 ```shell
-curl -L -o kubectl-explore.tar.gz https://github.com/keisku/kubectl-explore/releases/download/v0.7.0/kubectl-explore_v0.7.0_linux_amd64.tar.gz
-tar -xvf kubectl-explore.tar.gz
-sudo mv kubectl-explore /usr/local/bin
+# Other available architectures are linux_arm64, darwin_amd64, darwin_arm64, windows_amd64.
+export ARCH=linux_amd64
+export VERSION=v0.7.2
+wget -O- "https://github.com/keisku/kubectl-explore/releases/download/${VERSION}/kubectl-explore_${VERSION}_${ARCH}.tar.gz" | sudo tar -xzf - -C /usr/local/bin && sudo chmod +x /usr/local/bin/kubectl-explore
 ```
 
-#### Darwin(amd64)
-
-```shell
-curl -L -o kubectl-explore.tar.gz https://github.com/keisku/kubectl-explore/releases/download/v0.7.0/kubectl-explore_v0.7.0_darwin_amd64.tar.gz
-tar -xvf kubectl-explore.tar.gz
-sudo mv kubectl-explore /usr/local/bin
-```
-
-#### Darwin(arm64)
-
-```shell
-curl -L -o kubectl-explore.tar.gz https://github.com/keisku/kubectl-explore/releases/download/v0.7.0/kubectl-explore_v0.7.0_darwin_arm64.tar.gz
-tar -xvf kubectl-explore.tar.gz
-sudo mv kubectl-explore /usr/local/bin
-```
-
-#### Source
+From source.
 
 ```shell
 go install github.com/keisku/kubectl-explore@latest
 sudo mv $GOPATH/bin/kubectl-explore /usr/local/bin
 ```
-
-#### Validation
 
 Validate if `kubectl explore` can be executed.
 [The Kubernetes documentation](https://kubernetes.io/docs/tasks/extend-kubectl/kubectl-plugins/#using-a-plugin) explains how to use a plugin.
