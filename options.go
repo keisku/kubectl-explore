@@ -92,13 +92,13 @@ func NewOptions(streams genericclioptions.IOStreams) *Options {
 
 func (o *Options) Complete(f cmdutil.Factory, args []string) error {
 	var err error
-	if 0 < len(args) {
+	if len(args) == 0 {
+		o.inputFieldPath = regexp.MustCompile(".*")
+	} else {
 		o.inputFieldPath, err = regexp.Compile(args[0])
 		if err != nil {
 			return err
 		}
-	}
-	if len(args) == 1 {
 		o.resource = args[0]
 	}
 	o.Discovery, err = f.ToDiscoveryClient()
