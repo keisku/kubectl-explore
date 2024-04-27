@@ -21,11 +21,8 @@ Fuzzy-find the field to explain from all API resources.
 ```
 Fuzzy-find the field to explain from all API resources.
 
-Fields are identified via a simple JSONPath identifier:
-	<type>.<fieldName>[.<fieldName>]
-
 Usage:
-  kubectl explore RESOURCE [options] [flags]
+  kubectl explore [resource|regex] [flags]
 
 Examples:
 
@@ -98,7 +95,7 @@ Download the binary from [GitHub Releases](https://github.com/keisku/kubectl-exp
 ```shell
 # Other available architectures are linux_arm64, darwin_amd64, darwin_arm64, windows_amd64.
 export ARCH=linux_amd64
-export VERSION=v0.8.2
+export VERSION=v0.8.3
 wget -O- "https://github.com/keisku/kubectl-explore/releases/download/${VERSION}/kubectl-explore_${VERSION}_${ARCH}.tar.gz" | sudo tar -xzf - -C /usr/local/bin && sudo chmod +x /usr/local/bin/kubectl-explore
 ```
 
