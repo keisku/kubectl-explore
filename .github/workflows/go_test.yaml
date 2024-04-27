@@ -5,6 +5,22 @@ on:
       - main
 name: go test
 jobs:
+  e2e:
+    strategy:
+      matrix:
+        microk8s: [1.29, 1.30]
+        os: [ubuntu-latest]
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: Install microk8s
+      run: |
+        sudo snap install microk8s --classic --channel=${{ matrix.microk8s }}
+    - name: Test kubectl
+      run: |
+        sudo microk8s kubectl version
   test:
     strategy:
       matrix:
