@@ -1,12 +1,10 @@
 # kubectl-explore
 
-[![.github/workflows/test.yaml](https://github.com/keisku/kubectl-explore/actions/workflows/go_test.yaml/badge.svg)](https://github.com/keisku/kubectl-explore/actions/workflows/go_test.yaml)
+[![.github/workflows/test.yaml](https://github.com/keisku/kubectl-explore/actions/workflows/test.yaml/badge.svg)](https://github.com/keisku/kubectl-explore/actions/workflows/test.yaml)
+
+Fuzzy-find the field to explain from all API resources.
 
 ![demo](./demo.gif)
-
-## What
-
-This plugin fuzzy-find the field explanation from supported API resources. It implements different explanations for particular API version.
 
 ### See also
 
@@ -21,7 +19,7 @@ This plugin fuzzy-find the field explanation from supported API resources. It im
 ## Usage
 
 ```
-This command fuzzy-finds the explanation the field from supported API resources.
+Fuzzy-find the field to explain from all API resources.
 
 Fields are identified via a simple JSONPath identifier:
 	<type>.<fieldName>[.<fieldName>]
@@ -34,19 +32,17 @@ Examples:
 # Fuzzy-find the field to explain from all API resources.
 kubectl explore
 
+# Fuzzy-find the field to explain from pod.
+kubectl explore pod
+
 # Fuzzy-find the field to explain from fields matching the regex.
 kubectl explore pod.*node
 kubectl explore spec.*containers
 kubectl explore lifecycle
+kubectl explore sts.*Account
 
 # Fuzzy-find the field to explain from all API resources in the selected cluster.
 kubectl explore --context=onecontext
-
-# Fuzzy-find the field to explain from fields under "pod".
-kubectl explore pod
-
-# Fuzzy-find the field to explain from fields under "pod.spec.containers".
-kubectl explore pod.spec.containers
 
 
 Flags:

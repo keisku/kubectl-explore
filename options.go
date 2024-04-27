@@ -44,29 +44,27 @@ func NewCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use: "kubectl explore RESOURCE [options]",
-		Long: `This command fuzzy-finds the explanation the field from supported API resources.
+		Long: `Fuzzy-find the field to explain from all API resources.
 
 Fields are identified via a simple JSONPath identifier:
 	<type>.<fieldName>[.<fieldName>]
 `,
-		Short: "Fuzzy-find the explanation for a resource or its field.",
+		Short: "Fuzzy-find the field to explain from all API resources.",
 		Example: `
 # Fuzzy-find the field to explain from all API resources.
 kubectl explore
+
+# Fuzzy-find the field to explain from pod.
+kubectl explore pod
 
 # Fuzzy-find the field to explain from fields matching the regex.
 kubectl explore pod.*node
 kubectl explore spec.*containers
 kubectl explore lifecycle
+kubectl explore sts.*Account
 
 # Fuzzy-find the field to explain from all API resources in the selected cluster.
 kubectl explore --context=onecontext
-
-# Fuzzy-find the field to explain from fields under "pod".
-kubectl explore pod
-
-# Fuzzy-find the field to explain from fields under "pod.spec.containers".
-kubectl explore pod.spec.containers
 `,
 	}
 	cmd.Flags().StringVar(&o.APIVersion, "api-version", o.APIVersion, "Get different explanations for particular API version (API group/version)")
