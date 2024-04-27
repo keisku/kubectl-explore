@@ -58,9 +58,7 @@ kubectl explore --context=onecontext
 `,
 	}
 	cmd.Flags().StringVar(&o.APIVersion, "api-version", o.APIVersion, "Get different explanations for particular API version (API group/version)")
-	// Use default flags from
-	// https://github.com/kubernetes/kubectl/blob/a5df4d6bbf2d6778b81be4927547fb37173b495a/pkg/cmd/cmd.go#L93
-	kubeConfigFlags := genericclioptions.NewConfigFlags(true).WithDeprecatedPasswordFlag().WithDiscoveryBurst(300).WithDiscoveryQPS(50.0)
+	kubeConfigFlags := defaultConfigFlags().WithWarningPrinter(o.IOStreams)
 	flags := cmd.PersistentFlags()
 	kubeConfigFlags.AddFlags(flags)
 	matchVersionKubeConfigFlags := cmdutil.NewMatchVersionFlags(kubeConfigFlags)
@@ -214,4 +212,9 @@ func (o *Options) getGVK(name string) (schema.GroupVersionKind, error) {
 		gvk = apiVer.WithKind(gvk.Kind)
 	}
 	return gvk, nil
+}
+
+// Copy from https://github.com/kubernetes/kubectl/blob/4f380d07c5e5bb41a037a72c4b35c7f828ba2d59/pkg/cmd/cmd.go#L95-L97
+func defaultConfigFlags() *genericclioptions.ConfigFlags {
+	return genericclioptions.NewConfigFlags(true).WithDeprecatedPasswordFlag().WithDiscoveryBurst(300).WithDiscoveryQPS(50.0)
 }
