@@ -18,9 +18,19 @@ jobs:
     - name: Install microk8s
       run: |
         sudo snap install microk8s --classic --channel=${{ matrix.microk8s }}
+    - name: Install Go
+      uses: actions/setup-go@v5
+    - name: Build kubectl-explore
+      run: |
+        go build
+        chmod +x kubectl-explore
+        sudo install kubectl-explore /usr/local/bin
+    - name: Ensure kubectl-explore is available
+      run: |
+        sudo microk8s kubectl explore --help
     - name: Test kubectl
       run: |
-        sudo microk8s kubectl version
+        sudo microk8s kubectl get pods -A
   test:
     strategy:
       matrix:
