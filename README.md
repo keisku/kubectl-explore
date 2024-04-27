@@ -87,6 +87,14 @@ kubectl krew install explore
 kubectl explore --help
 ```
 
+### Nix
+
+The plugin is available in [nixpkgs](https://search.nixos.org/packages?query=kubectl-explore):
+
+```bash
+nix-env -iA nixpkgs.kubectl-explore
+```
+
 ### Download the binary
 
 Download the binary from [GitHub Releases](https://github.com/keisku/kubectl-explore/releases) and drop it in your `$PATH`.
