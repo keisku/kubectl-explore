@@ -31,29 +31,36 @@ Usage:
 
 Examples:
 
-# Fuzzy-find the field explanation from supported API resources.
+# Fuzzy-find the field to explain from all API resources.
 kubectl explore
 
-# Fuzzy-find the field explanation from "pod"
+# Fuzzy-find the field to explain from fields matching the regex.
+kubectl explore pod.*node
+kubectl explore spec.*containers
+kubectl explore lifecycle
+
+# Fuzzy-find the field to explain from all API resources in the selected cluster.
+kubectl explore --context=onecontext
+
+# Fuzzy-find the field to explain from fields under "pod".
 kubectl explore pod
 
-# Fuzzy-find the field explanation from "pod.spec.containers"
+# Fuzzy-find the field to explain from fields under "pod.spec.containers".
 kubectl explore pod.spec.containers
 
-# Fuzzy-find the field explanation from supported API resources in the selected cluster.
-kubectl explore --context=onecontext
 
 Flags:
       --api-version string             Get different explanations for particular API version (API group/version)
       --as string                      Username to impersonate for the operation. User could be a regular user or a service account in a namespace.
       --as-group stringArray           Group to impersonate for the operation, this flag can be repeated to specify multiple groups.
       --as-uid string                  UID to impersonate for the operation.
-      --cache-dir string               Default cache directory (default "/Users/keisukeumegaki/.kube/cache")
+      --cache-dir string               Default cache directory (default "/root/.kube/cache")
       --certificate-authority string   Path to a cert file for the certificate authority
       --client-certificate string      Path to a client certificate file for TLS
       --client-key string              Path to a client key file for TLS
       --cluster string                 The name of the kubeconfig cluster to use
       --context string                 The name of the kubeconfig context to use
+      --disable-compression            If true, opt-out of response compression for all requests to the server
   -h, --help                           help for kubectl
       --insecure-skip-tls-verify       If true, the server's certificate will not be checked for validity. This will make your HTTPS connections insecure
       --kubeconfig string              Path to the kubeconfig file to use for CLI requests.

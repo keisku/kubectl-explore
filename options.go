@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"os"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -13,6 +15,7 @@ import (
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/client-go/discovery"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
+	"k8s.io/kube-openapi/pkg/util/proto"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/explain"
 	"k8s.io/kubectl/pkg/util/openapi"
@@ -27,9 +30,9 @@ type Options struct {
 	Discovery discovery.CachedDiscoveryInterface
 	Schema    openapi.Resources
 
-	inputFieldPath string
+	inputFieldPath *regexp.Regexp
 	resource       string
-	gvk            schema.GroupVersionKind
+	gvks           []schema.GroupVersionKind
 }
 
 func NewCmd() *cobra.Command {
@@ -48,17 +51,22 @@ Fields are identified via a simple JSONPath identifier:
 `,
 		Short: "Fuzzy-find the explanation for a resource or its field.",
 		Example: `
-# Fuzzy-find the field explanation from supported API resources.
+# Fuzzy-find the field to explain from all API resources.
 kubectl explore
 
-# Fuzzy-find the field explanation from "pod"
+# Fuzzy-find the field to explain from fields matching the regex.
+kubectl explore pod.*node
+kubectl explore spec.*containers
+kubectl explore lifecycle
+
+# Fuzzy-find the field to explain from all API resources in the selected cluster.
+kubectl explore --context=onecontext
+
+# Fuzzy-find the field to explain from fields under "pod".
 kubectl explore pod
 
-# Fuzzy-find the field explanation from "pod.spec.containers"
+# Fuzzy-find the field to explain from fields under "pod.spec.containers".
 kubectl explore pod.spec.containers
-
-# Fuzzy-find the field explanation from supported API resources in the selected cluster.
-kubectl explore --context=onecontext
 `,
 	}
 	cmd.Flags().StringVar(&o.APIVersion, "api-version", o.APIVersion, "Get different explanations for particular API version (API group/version)")
@@ -83,13 +91,16 @@ func NewOptions(streams genericclioptions.IOStreams) *Options {
 }
 
 func (o *Options) Complete(f cmdutil.Factory, args []string) error {
-	if 0 < len(args) {
-		o.inputFieldPath = args[0]
-	}
-	if len(args) == 1 {
+	var err error
+	if len(args) == 0 {
+		o.inputFieldPath = regexp.MustCompile(".*")
+	} else {
+		o.inputFieldPath, err = regexp.Compile(args[0])
+		if err != nil {
+			return err
+		}
 		o.resource = args[0]
 	}
-	var err error
 	o.Discovery, err = f.ToDiscoveryClient()
 	if err != nil {
 		return err
@@ -103,22 +114,79 @@ func (o *Options) Complete(f cmdutil.Factory, args []string) error {
 		return err
 	}
 	if o.resource == "" {
-		o.gvk, err = o.findGVK()
+		gvk, err := o.findGVK()
+		if err != nil {
+			return err
+		}
+		o.gvks = []schema.GroupVersionKind{gvk}
 	} else {
-		o.gvk, err = o.getGVK(strings.Split(o.resource, ".")[0])
-	}
-	if err != nil {
-		return err
+		gvk, err := o.getGVK(strings.Split(o.resource, ".")[0])
+		if err == nil {
+			o.gvks = []schema.GroupVersionKind{gvk}
+		} else {
+			o.gvks, err = o.listGVKs()
+			if err != nil {
+				return err
+			}
+		}
 	}
 	return nil
 }
 
 func (o *Options) Run() error {
-	e, err := newExplorer(o)
+	pathExplainers := make(map[string]explainer)
+	var paths []string
+	for _, gvk := range o.gvks {
+		visitor := &schemaVisitor{
+			pathSchema: make(map[string]proto.Schema),
+			prevPath:   strings.ToLower(gvk.Kind),
+			err:        nil,
+		}
+		s := o.Schema.LookupResource(gvk)
+		if s == nil {
+			return fmt.Errorf("no schema found for %s", gvk)
+		}
+		s.Accept(visitor)
+		if visitor.err != nil {
+			return visitor.err
+		}
+		filteredPaths := visitor.listPaths(func(s string) bool {
+			return o.inputFieldPath.MatchString(s)
+		})
+		for _, p := range filteredPaths {
+			pathExplainers[p] = explainer{
+				schemaByGvk: s,
+				gvk:         gvk,
+				pathSchema:  visitor.pathSchema,
+			}
+			paths = append(paths, p)
+		}
+	}
+	if len(paths) == 0 {
+		return fmt.Errorf("no paths found for %q", o.inputFieldPath)
+	}
+	if len(paths) == 1 {
+		return pathExplainers[paths[0]].explain(o.Out, paths[0])
+	}
+	sort.Strings(paths)
+	idx, err := fuzzyfinder.Find(
+		paths,
+		func(i int) string { return paths[i] },
+		fuzzyfinder.WithPreviewWindow(func(i, _, _ int) string {
+			if i < 0 {
+				return ""
+			}
+			var w bytes.Buffer
+			if err := pathExplainers[paths[i]].explain(&w, paths[i]); err != nil {
+				return fmt.Sprintf("preview is broken: %s", err)
+			}
+			return w.String()
+		},
+		))
 	if err != nil {
 		return err
 	}
-	return e.explore(o.Out)
+	return pathExplainers[paths[idx]].explain(o.Out, paths[idx])
 }
 
 func (o *Options) findGVK() (schema.GroupVersionKind, error) {
