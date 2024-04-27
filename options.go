@@ -51,17 +51,22 @@ Fields are identified via a simple JSONPath identifier:
 `,
 		Short: "Fuzzy-find the explanation for a resource or its field.",
 		Example: `
-# Fuzzy-find the field explanation from supported API resources.
+# Fuzzy-find the field to explain from all API resources.
 kubectl explore
 
-# Fuzzy-find the field explanation from "pod"
+# Fuzzy-find the field to explain from fields matching the regex.
+kubectl explore pod.*node
+kubectl explore spec.*containers
+kubectl explore lifecycle
+
+# Fuzzy-find the field to explain from all API resources in the selected cluster.
+kubectl explore --context=onecontext
+
+# Fuzzy-find the field to explain from fields under "pod".
 kubectl explore pod
 
-# Fuzzy-find the field explanation from "pod.spec.containers"
+# Fuzzy-find the field to explain from fields under "pod.spec.containers".
 kubectl explore pod.spec.containers
-
-# Fuzzy-find the field explanation from supported API resources in the selected cluster.
-kubectl explore --context=onecontext
 `,
 	}
 	cmd.Flags().StringVar(&o.APIVersion, "api-version", o.APIVersion, "Get different explanations for particular API version (API group/version)")
