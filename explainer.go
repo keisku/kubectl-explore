@@ -17,7 +17,7 @@ type explainer struct {
 }
 
 // explain explains the field associated with the given path.
-func (e *explainer) explain(w io.Writer, path string) error {
+func (e explainer) explain(w io.Writer, path string) error {
 	if path == "" {
 		return fmt.Errorf("path is empty: gvk=%s", e.gvk)
 	}
@@ -32,7 +32,7 @@ func (e *explainer) explain(w io.Writer, path string) error {
 	// e.g. "pod.spec.containers.env" -> "pod.spec.containers"
 	parent, ok := e.pathSchema[path[:strings.LastIndex(path, ".")]]
 	if !ok {
-		return fmt.Errorf("%q is not found", path)
+		return fmt.Errorf("cannot explain %q: not found", path)
 	}
 
 	// get the key from the path.
