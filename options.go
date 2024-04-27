@@ -120,14 +120,31 @@ func (o *Options) Complete(f cmdutil.Factory, args []string) error {
 		}
 		o.gvks = []schema.GroupVersionKind{gvk}
 	} else {
-		gvk, err := o.getGVK(strings.Split(o.resource, ".")[0])
-		if err == nil {
-			o.gvks = []schema.GroupVersionKind{gvk}
-		} else {
+		var gvk schema.GroupVersionKind
+		var err error
+		var idx int
+		for i := 1; i <= len(o.resource); i++ {
+			gvk, err = o.getGVK(o.resource[:i])
+			if err != nil {
+				continue
+			}
+			idx = i
+			break
+		}
+		if gvk.Empty() {
 			o.gvks, err = o.listGVKs()
 			if err != nil {
 				return err
 			}
+		} else {
+			// The left part of the input should be the resource name. E.g., "hpa", "sts", etc
+			// The right part of the input should be the field name or regex. E.g., "spec.replicas", "spec.*containers", etc
+			right := strings.TrimLeft(o.resource, o.resource[:idx])
+			o.inputFieldPath, err = regexp.Compile(strings.ToLower(right))
+			if err != nil {
+				return err
+			}
+			o.gvks = []schema.GroupVersionKind{gvk}
 		}
 	}
 	return nil
