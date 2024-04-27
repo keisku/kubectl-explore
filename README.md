@@ -21,11 +21,8 @@ Fuzzy-find the field to explain from all API resources.
 ```
 Fuzzy-find the field to explain from all API resources.
 
-Fields are identified via a simple JSONPath identifier:
-	<type>.<fieldName>[.<fieldName>]
-
 Usage:
-  kubectl explore RESOURCE [options] [flags]
+  kubectl explore [resource|regex] [flags]
 
 Examples:
 
