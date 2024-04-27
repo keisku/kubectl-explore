@@ -26,6 +26,10 @@ type Options struct {
 	Mapper    meta.RESTMapper
 	Discovery discovery.CachedDiscoveryInterface
 	Schema    openapi.Resources
+
+	inputFieldPath string
+	resource       string
+	gvk            schema.GroupVersionKind
 }
 
 func NewCmd() *cobra.Command {
@@ -66,9 +70,8 @@ kubectl explore --context=onecontext
 	f := cmdutil.NewFactory(matchVersionKubeConfigFlags)
 
 	cmd.Run = func(_ *cobra.Command, args []string) {
-		cmdutil.CheckErr(o.Complete(f))
-		cmdutil.CheckErr(o.Validate(args))
-		cmdutil.CheckErr(o.Run(args))
+		cmdutil.CheckErr(o.Complete(f, args))
+		cmdutil.CheckErr(o.Run())
 	}
 	return cmd
 }
@@ -79,7 +82,13 @@ func NewOptions(streams genericclioptions.IOStreams) *Options {
 	}
 }
 
-func (o *Options) Complete(f cmdutil.Factory) error {
+func (o *Options) Complete(f cmdutil.Factory, args []string) error {
+	if 0 < len(args) {
+		o.inputFieldPath = args[0]
+	}
+	if len(args) == 1 {
+		o.resource = args[0]
+	}
 	var err error
 	o.Discovery, err = f.ToDiscoveryClient()
 	if err != nil {
@@ -93,41 +102,23 @@ func (o *Options) Complete(f cmdutil.Factory) error {
 	if err != nil {
 		return err
 	}
-	return nil
-}
-
-func (o *Options) Validate(args []string) error {
-	if len(args) > 1 {
-		return fmt.Errorf("We accept only this format: explore RESOURCE")
-	}
-
-	return nil
-}
-
-func (o *Options) Run(args []string) error {
-	var inputFieldPath string
-	if 0 < len(args) {
-		inputFieldPath = args[0]
-	}
-	var resource string
-	if len(args) == 1 {
-		resource = args[0]
-	}
-	var gvk schema.GroupVersionKind
-	var err error
-	if resource == "" {
-		gvk, err = o.findGVK()
+	if o.resource == "" {
+		o.gvk, err = o.findGVK()
 	} else {
-		gvk, err = o.getGVK(strings.Split(resource, ".")[0])
+		o.gvk, err = o.getGVK(strings.Split(o.resource, ".")[0])
 	}
 	if err != nil {
 		return err
 	}
-	e, err := NewExplorer(inputFieldPath, o.Schema, gvk)
+	return nil
+}
+
+func (o *Options) Run() error {
+	e, err := newExplorer(o)
 	if err != nil {
 		return err
 	}
-	return e.Explore(o.Out)
+	return e.explore(o.Out)
 }
 
 func (o *Options) findGVK() (schema.GroupVersionKind, error) {
