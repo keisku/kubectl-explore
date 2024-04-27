@@ -1,0 +1,38 @@
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+name: test
+jobs:
+  test:
+    strategy:
+      matrix:
+        microk8s: [1.29/stable, 1.30/stable]
+        os: [ubuntu-latest]
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: Install microk8s
+      run: |
+        sudo snap install microk8s --classic --channel=${{ matrix.microk8s }}
+    - name: Install Go
+      uses: actions/setup-go@v5
+    - name: go vet
+      run: go vet ./...
+    - name: go test
+      run: go test -v ./...
+    - name: Build kubectl-explore
+      run: |
+        go build
+        chmod +x kubectl-explore
+        sudo install kubectl-explore /usr/local/bin
+    - name: Run kubectl-explore
+      run: |
+        sudo microk8s kubectl explore hpa.*own.*id > /dev/null
+        sudo microk8s kubectl explore provider > /dev/null
+        sudo microk8s kubectl explore statefulset.spec.template.spec.volumes.projected.sources.serviceAccountToken.expirationSeconds > /dev/null
+        sudo microk8s kubectl explore sts.spec.template.spec.volumes.projected.sources.serviceAccountToken.expirationSeconds > /dev/null
+        sudo microk8s kubectl explore sts.spec.template.spec.volumes.projected.sources.serviceAccountToken.expir > /dev/null
