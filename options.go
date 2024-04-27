@@ -30,9 +30,9 @@ type Options struct {
 	Discovery discovery.CachedDiscoveryInterface
 	Schema    openapi.Resources
 
-	inputFieldPath *regexp.Regexp
-	resource       string
-	gvks           []schema.GroupVersionKind
+	inputFieldPathRegex *regexp.Regexp
+	inputFieldPath      string
+	gvks                []schema.GroupVersionKind
 }
 
 func NewCmd() *cobra.Command {
@@ -93,13 +93,13 @@ func NewOptions(streams genericclioptions.IOStreams) *Options {
 func (o *Options) Complete(f cmdutil.Factory, args []string) error {
 	var err error
 	if len(args) == 0 {
-		o.inputFieldPath = regexp.MustCompile(".*")
+		o.inputFieldPathRegex = regexp.MustCompile(".*")
 	} else {
-		o.inputFieldPath, err = regexp.Compile(args[0])
+		o.inputFieldPathRegex, err = regexp.Compile(args[0])
 		if err != nil {
 			return err
 		}
-		o.resource = args[0]
+		o.inputFieldPath = args[0]
 	}
 	o.Discovery, err = f.ToDiscoveryClient()
 	if err != nil {
@@ -113,7 +113,7 @@ func (o *Options) Complete(f cmdutil.Factory, args []string) error {
 	if err != nil {
 		return err
 	}
-	if o.resource == "" {
+	if o.inputFieldPath == "" {
 		gvk, err := o.findGVK()
 		if err != nil {
 			return err
@@ -123,8 +123,8 @@ func (o *Options) Complete(f cmdutil.Factory, args []string) error {
 		var gvk schema.GroupVersionKind
 		var err error
 		var idx int
-		for i := 1; i <= len(o.resource); i++ {
-			gvk, err = o.getGVK(o.resource[:i])
+		for i := 1; i <= len(o.inputFieldPath); i++ {
+			gvk, err = o.getGVK(o.inputFieldPath[:i])
 			if err != nil {
 				continue
 			}
@@ -137,10 +137,17 @@ func (o *Options) Complete(f cmdutil.Factory, args []string) error {
 				return err
 			}
 		} else {
-			// The left part of the input should be the resource name. E.g., "hpa", "sts", etc
-			// The right part of the input should be the field name or regex. E.g., "spec.replicas", "spec.*containers", etc
-			right := strings.TrimLeft(o.resource, o.resource[:idx])
-			o.inputFieldPath, err = regexp.Compile(strings.ToLower(right))
+			// In this case, the input includes the resource name.
+
+			// The left part of the input should be the resource name.
+			// E.g., "hpa", "statefulset", "node", etc.
+			left := o.inputFieldPath[:idx]
+
+			// The right part of the input should be the field or regex.
+			// E.g., "spec.template.spec.volumes.projected.sources.serviceAcc ", "spec.*containers", "spec.providerID", etc.
+			right := strings.TrimLeft(o.inputFieldPath, left)
+
+			o.inputFieldPathRegex, err = regexp.Compile(right)
 			if err != nil {
 				return err
 			}
@@ -168,7 +175,7 @@ func (o *Options) Run() error {
 			return visitor.err
 		}
 		filteredPaths := visitor.listPaths(func(s string) bool {
-			return o.inputFieldPath.MatchString(s)
+			return o.inputFieldPathRegex.MatchString(s)
 		})
 		for _, p := range filteredPaths {
 			pathExplainers[p] = explainer{
