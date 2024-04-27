@@ -5,173 +5,48 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"testing"
 
 	openapi_v2 "github.com/google/gnostic/openapiv2"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/kube-openapi/pkg/util/proto"
 	"k8s.io/kubectl/pkg/util/openapi"
 )
 
-func Test_Explorer_Explore(t *testing.T) {
-	openAPIResources := fetchOpenAPIResources(t)
-	tests := []struct {
-		inputFieldPath string
-		gvk            schema.GroupVersionKind
-		wantW          string
-		wantErr        string
-	}{
-		{
-			inputFieldPath: "node.spec.hoge",
-			gvk: schema.GroupVersionKind{
-				Group:   "",
-				Version: "v1",
-				Kind:    "Node",
-			},
-			wantErr: `explain "node.spec.hoge": field "hoge" does not exist`,
-		},
-		{
-			inputFieldPath: "pod.spec.tolerations.key",
-			gvk: schema.GroupVersionKind{
-				Group:   "",
-				Version: "v1",
-				Kind:    "Pod",
-			},
-			wantW: `KIND:     Pod
-VERSION:  v1
-
-FIELD:    key <string>
-
-DESCRIPTION:
-     Key is the taint key that the toleration applies to. Empty means match all
-     taint keys. If the key is empty, operator must be Exists; this combination
-     means to match all values and all keys.
-`,
-		},
-		{
-			inputFieldPath: "pod.spec.serviceAccount",
-			gvk: schema.GroupVersionKind{
-				Group:   "",
-				Version: "v1",
-				Kind:    "Pod",
-			},
-			wantW: `KIND:     Pod
-VERSION:  v1
-
-FIELD:    serviceAccount <string>
-
-DESCRIPTION:
-     DeprecatedServiceAccount is a depreciated alias for ServiceAccountName.
-     Deprecated: Use serviceAccountName instead.
-`,
-		},
-		{
-			inputFieldPath: "node.spec",
-			gvk: schema.GroupVersionKind{
-				Group:   "",
-				Version: "v1",
-				Kind:    "Node",
-			},
-			wantW: `KIND:     Node
-VERSION:  v1
-
-RESOURCE: spec <Object>
-
-DESCRIPTION:
-     Spec defines the behavior of a node.
-     https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
-
-     NodeSpec describes the attributes that a node is created with.
-
-FIELDS:
-   configSource	<Object>
-     Deprecated: Previously used to specify the source of the node's
-     configuration for the DynamicKubeletConfig feature. This feature is removed
-     from Kubelets as of 1.24 and will be fully removed in 1.26.
-
-   externalID	<string>
-     Deprecated. Not all kubelets will set this field. Remove field after 1.13.
-     see: https://issues.k8s.io/61966
-
-   podCIDR	<string>
-     PodCIDR represents the pod IP range assigned to the node.
-
-   podCIDRs	<[]string>
-     podCIDRs represents the IP ranges assigned to the node for usage by Pods on
-     that node. If this field is specified, the 0th entry must match the podCIDR
-     field. It may contain at most 1 value for each of IPv4 and IPv6.
-
-   providerID	<string>
-     ID of the node assigned by the cloud provider in the format:
-     <ProviderName>://<ProviderSpecificNodeID>
-
-   taints	<[]Object>
-     If specified, the node's taints.
-
-   unschedulable	<boolean>
-     Unschedulable controls node schedulability of new pods. By default, node is
-     schedulable. More info:
-     https://kubernetes.io/docs/concepts/nodes/node/#manual-node-administration
-
-`,
-		},
+var k8sVersions = []string{"1.25", "1.26", "1.27", "1.28", "1.29", "1.30"}
+var APIResourceByK8sVersion = func() map[string]openapi.Resources {
+	resources := make(map[string]openapi.Resources, len(k8sVersions))
+	for _, version := range k8sVersions {
+		resources[version] = fetchOpenAPIResources(version)
 	}
-	for _, tt := range tests {
-		t.Run(fmt.Sprintf(`Explain "%s"`, tt.inputFieldPath), func(t *testing.T) {
-			e, err := NewExplorer(
-				tt.inputFieldPath,
-				openAPIResources,
-				tt.gvk,
-			)
-			assert.Nil(t, err)
-			// Overwrite this func for testing.
-			// Usually, the result depends on the user's input.
-			getPathToExplain = func(_ *Explorer) (string, error) {
-				return tt.inputFieldPath, nil
-			}
-			var b bytes.Buffer
-			err = e.Explore(&b)
-			if tt.wantErr == "" {
-				assert.Nil(t, err)
-			} else {
-				assert.EqualError(t, err, tt.wantErr)
-			}
-			assert.Equal(t, tt.wantW, b.String())
-		})
-	}
-}
+	return resources
+}()
 
 const urlToSwaggerJsonFormat = "https://raw.githubusercontent.com/kubernetes/kubernetes/release-%s/api/openapi-spec/swagger.json"
-const swaggerJsonVersion = "1.25"
 
 // fetchOpenAPIResources fetches swagger.json from the Kubernetes release on GitHub.
-func fetchOpenAPIResources(t *testing.T) openapi.Resources {
-	t.Helper()
-
-	resp, err := http.DefaultClient.Get(fmt.Sprintf(urlToSwaggerJsonFormat, swaggerJsonVersion))
+func fetchOpenAPIResources(version string) openapi.Resources {
+	resp, err := http.DefaultClient.Get(fmt.Sprintf(urlToSwaggerJsonFormat, version))
 	if err != nil {
-		t.Fatalf("fetch swagger.json: %s", err)
-		return nil
+		panic(fmt.Sprintf("fetch swagger.json: %s", err))
 	}
 	defer resp.Body.Close()
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		t.Fatalf("read response body: %s", err)
-		return nil
+		panic(fmt.Sprintf("read response body: %s", err))
 	}
 	doc, err := openapi_v2.ParseDocument(body)
 	if err != nil {
-		t.Fatalf("parse swagger.json: %s", err)
-		return nil
+		panic(fmt.Sprintf("parse swagger.json: %s", err))
 	}
 	r, err := openapi.NewOpenAPIData(doc)
 	if err != nil {
-		t.Fatalf("creates a new resource from the doc: %s", err)
-		return nil
+		panic(fmt.Sprintf("creates a new resource from the doc: %s", err))
 	}
 	return r
 }
-
 func Test_fullformInputFieldPath(t *testing.T) {
 	tests := []struct {
 		inputFieldPath string
@@ -193,6 +68,159 @@ func Test_fullformInputFieldPath(t *testing.T) {
 		t.Run(fmt.Sprintf("make %s full-formed", tt.inputFieldPath), func(t *testing.T) {
 			if got := fullformInputFieldPath(tt.inputFieldPath, tt.fullformedKind); got != tt.want {
 				t.Errorf("fullformInputFieldPath() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_explain(t *testing.T) {
+	tests := []struct {
+		gvk             schema.GroupVersionKind
+		expectUnsupport map[string]bool
+		// key: path, value: section keys to check
+		expectExplainOutput map[string][]string
+	}{
+		{
+			gvk: schema.GroupVersionKind{Group: "", Version: "v1", Kind: "Pod"},
+			expectExplainOutput: map[string][]string{
+				".spec":                      {"KIND", "VERSION", "FIELD", "DESCRIPTION", "FIELDS"},
+				".status":                    {"KIND", "VERSION", "FIELD", "DESCRIPTION", "FIELDS"},
+				".metadata":                  {"KIND", "VERSION", "FIELD", "DESCRIPTION", "FIELDS"},
+				".spec.hoge":                 {},
+				".spec.containers":           {"KIND", "VERSION", "FIELD", "DESCRIPTION", "FIELDS"},
+				".spec.affinity.podAffinity": {"KIND", "VERSION", "FIELD", "DESCRIPTION", "FIELDS"},
+				".spec.affinity.podAffinity.preferredDuringSchedulingIgnoredDuringExecution.weight": {"KIND", "VERSION", "FIELD", "DESCRIPTION"},
+			},
+		},
+		{
+			gvk:             schema.GroupVersionKind{Group: "", Version: "v2", Kind: "Pod"},
+			expectUnsupport: map[string]bool{"1.25": true, "1.26": true, "1.27": true, "1.28": true, "1.29": true, "1.30": true},
+		},
+		{
+			gvk: schema.GroupVersionKind{Group: "", Version: "v1", Kind: "Node"},
+			expectExplainOutput: map[string][]string{
+				".spec":      {"KIND", "VERSION", "FIELD", "DESCRIPTION", "FIELDS"},
+				".status":    {"KIND", "VERSION", "FIELD", "DESCRIPTION", "FIELDS"},
+				".metadata":  {"KIND", "VERSION", "FIELD", "DESCRIPTION", "FIELDS"},
+				".spec.hoge": {},
+			},
+		},
+		{
+			gvk: schema.GroupVersionKind{Group: "", Version: "v1", Kind: "Service"},
+			expectExplainOutput: map[string][]string{
+				".spec":      {"KIND", "VERSION", "FIELD", "DESCRIPTION", "FIELDS"},
+				".status":    {"KIND", "VERSION", "FIELD", "DESCRIPTION", "FIELDS"},
+				".metadata":  {"KIND", "VERSION", "FIELD", "DESCRIPTION", "FIELDS"},
+				".spec.hoge": {},
+			},
+		},
+		{
+			gvk: schema.GroupVersionKind{Group: "", Version: "v1", Kind: "Namespace"},
+			expectExplainOutput: map[string][]string{
+				".spec":      {"KIND", "VERSION", "FIELD", "DESCRIPTION", "FIELDS"},
+				".status":    {"KIND", "VERSION", "FIELD", "DESCRIPTION", "FIELDS"},
+				".metadata":  {"KIND", "VERSION", "FIELD", "DESCRIPTION", "FIELDS"},
+				".spec.hoge": {},
+			},
+		},
+		{
+			gvk: schema.GroupVersionKind{Group: "apps", Version: "v1", Kind: "Deployment"},
+			expectExplainOutput: map[string][]string{
+				".spec":      {"KIND", "VERSION", "FIELD", "DESCRIPTION", "FIELDS"},
+				".status":    {"KIND", "VERSION", "FIELD", "DESCRIPTION", "FIELDS"},
+				".metadata":  {"KIND", "VERSION", "FIELD", "DESCRIPTION", "FIELDS"},
+				".spec.hoge": {},
+			},
+		},
+		{
+			gvk: schema.GroupVersionKind{Group: "apps", Version: "v1", Kind: "DaemonSet"},
+			expectExplainOutput: map[string][]string{
+				".spec":      {"KIND", "VERSION", "FIELD", "DESCRIPTION", "FIELDS"},
+				".status":    {"KIND", "VERSION", "FIELD", "DESCRIPTION", "FIELDS"},
+				".metadata":  {"KIND", "VERSION", "FIELD", "DESCRIPTION", "FIELDS"},
+				".spec.hoge": {},
+			},
+		},
+		{
+			gvk: schema.GroupVersionKind{Group: "apps", Version: "v1", Kind: "ReplicaSet"},
+			expectExplainOutput: map[string][]string{
+				".spec":      {"KIND", "VERSION", "FIELD", "DESCRIPTION", "FIELDS"},
+				".status":    {"KIND", "VERSION", "FIELD", "DESCRIPTION", "FIELDS"},
+				".metadata":  {"KIND", "VERSION", "FIELD", "DESCRIPTION", "FIELDS"},
+				".spec.hoge": {},
+			},
+		},
+		{
+			gvk: schema.GroupVersionKind{Group: "apps", Version: "v1", Kind: "StatefulSet"},
+			expectExplainOutput: map[string][]string{
+				".spec":      {"KIND", "VERSION", "FIELD", "DESCRIPTION", "FIELDS"},
+				".status":    {"KIND", "VERSION", "FIELD", "DESCRIPTION", "FIELDS"},
+				".metadata":  {"KIND", "VERSION", "FIELD", "DESCRIPTION", "FIELDS"},
+				".spec.hoge": {},
+			},
+		},
+		{
+			gvk: schema.GroupVersionKind{Group: "batch", Version: "v1", Kind: "Job"},
+			expectExplainOutput: map[string][]string{
+				".spec":      {"KIND", "VERSION", "FIELD", "DESCRIPTION", "FIELDS"},
+				".status":    {"KIND", "VERSION", "FIELD", "DESCRIPTION", "FIELDS"},
+				".metadata":  {"KIND", "VERSION", "FIELD", "DESCRIPTION", "FIELDS"},
+				".spec.hoge": {},
+			},
+		},
+		{
+			gvk: schema.GroupVersionKind{Group: "batch", Version: "v1", Kind: "CronJob"},
+			expectExplainOutput: map[string][]string{
+				".spec":      {"KIND", "VERSION", "FIELD", "DESCRIPTION", "FIELDS"},
+				".status":    {"KIND", "VERSION", "FIELD", "DESCRIPTION", "FIELDS"},
+				".metadata":  {"KIND", "VERSION", "FIELD", "DESCRIPTION", "FIELDS"},
+				".spec.hoge": {},
+			},
+		},
+		{
+			gvk: schema.GroupVersionKind{Group: "autoscaling", Version: "v2", Kind: "HorizontalPodAutoscaler"},
+			expectExplainOutput: map[string][]string{
+				".spec":             {"KIND", "VERSION", "FIELD", "DESCRIPTION", "FIELDS"},
+				".status":           {"KIND", "VERSION", "FIELD", "DESCRIPTION", "FIELDS"},
+				".metadata":         {"KIND", "VERSION", "FIELD", "DESCRIPTION", "FIELDS"},
+				".spec.hoge":        {},
+				".spec.maxReplicas": {"KIND", "VERSION", "FIELD", "DESCRIPTION"},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.gvk.String(), func(t *testing.T) {
+			for _, version := range k8sVersions {
+				schema := APIResourceByK8sVersion[version].LookupResource(tt.gvk)
+				if tt.expectUnsupport[version] {
+					require.Empty(t, schema, "%s: schema found for %s", version, tt.gvk)
+					continue
+				}
+				require.NotNil(t, schema, "%s: schema not found for %s", version, tt.gvk)
+				pathSchema := make(map[string]proto.Schema)
+				e := &explainer{
+					schemaByGvk: schema,
+					gvk:         tt.gvk,
+					pathSchema:  pathSchema,
+				}
+				v := &schemaVisitor{
+					prevPath:   "",
+					pathSchema: pathSchema,
+					err:        nil,
+				}
+				schema.Accept(v)
+				require.NoError(t, v.err, "%s: schemaVisitor must not return an error", version)
+				for path, keys := range tt.expectExplainOutput {
+					var buf bytes.Buffer
+					err := e.explain(&buf, path)
+					if len(keys) == 0 {
+						require.Error(t, err, "%s: explain %q must return an error", version, path)
+					} else {
+						for _, key := range keys {
+							require.True(t, strings.Contains(buf.String(), key), "%s: explain %q must contain %q: actual output: %q", version, path, key, buf)
+						}
+					}
+				}
 			}
 		})
 	}
