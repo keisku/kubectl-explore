@@ -22,17 +22,19 @@ import (
 )
 
 type Options struct {
-	genericclioptions.IOStreams
+	// User input
+	apiVersion     string
+	inputFieldPath string
 
-	APIVersion string
-
-	Mapper    meta.RESTMapper
-	Discovery discovery.CachedDiscoveryInterface
-	Schema    openapi.Resources
-
+	// After completion
 	inputFieldPathRegex *regexp.Regexp
-	inputFieldPath      string
 	gvks                []schema.GroupVersionKind
+
+	// Dependencies
+	genericclioptions.IOStreams
+	mapper    meta.RESTMapper
+	discovery discovery.CachedDiscoveryInterface
+	schema    openapi.Resources
 }
 
 func NewCmd() *cobra.Command {
@@ -43,7 +45,7 @@ func NewCmd() *cobra.Command {
 	})
 
 	cmd := &cobra.Command{
-		Use: "kubectl explore [resource|regex] [flags]",
+		Use:   "kubectl explore [resource|regex] [flags]",
 		Short: "Fuzzy-find the field to explain from all API resources.",
 		Example: `
 # Fuzzy-find the field to explain from all API resources.
@@ -62,7 +64,7 @@ kubectl explore sts.*Account
 kubectl explore --context=onecontext
 `,
 	}
-	cmd.Flags().StringVar(&o.APIVersion, "api-version", o.APIVersion, "Get different explanations for particular API version (API group/version)")
+	cmd.Flags().StringVar(&o.apiVersion, "api-version", o.apiVersion, "Get different explanations for particular API version (API group/version)")
 	kubeConfigFlags := defaultConfigFlags().WithWarningPrinter(o.IOStreams)
 	flags := cmd.PersistentFlags()
 	kubeConfigFlags.AddFlags(flags)
@@ -94,15 +96,15 @@ func (o *Options) Complete(f cmdutil.Factory, args []string) error {
 		}
 		o.inputFieldPath = args[0]
 	}
-	o.Discovery, err = f.ToDiscoveryClient()
+	o.discovery, err = f.ToDiscoveryClient()
 	if err != nil {
 		return err
 	}
-	o.Mapper, err = f.ToRESTMapper()
+	o.mapper, err = f.ToRESTMapper()
 	if err != nil {
 		return err
 	}
-	o.Schema, err = f.OpenAPISchema()
+	o.schema, err = f.OpenAPISchema()
 	if err != nil {
 		return err
 	}
@@ -159,7 +161,7 @@ func (o *Options) Run() error {
 			prevPath:   strings.ToLower(gvk.Kind),
 			err:        nil,
 		}
-		s := o.Schema.LookupResource(gvk)
+		s := o.schema.LookupResource(gvk)
 		if s == nil {
 			return fmt.Errorf("no schema found for %s", gvk)
 		}
@@ -227,7 +229,7 @@ func (o *Options) findGVK() (schema.GroupVersionKind, error) {
 
 // listGVKs returns a list of GroupVersionKinds that is sorted in alphabetical order.
 func (o *Options) listGVKs() ([]schema.GroupVersionKind, error) {
-	resourceList, err := o.Discovery.ServerPreferredResources()
+	resourceList, err := o.discovery.ServerPreferredResources()
 	if err != nil {
 		return nil, fmt.Errorf("get all API resources: %w", err)
 	}
@@ -260,30 +262,30 @@ func (o *Options) listGVKs() ([]schema.GroupVersionKind, error) {
 func (o *Options) getGVK(name string) (schema.GroupVersionKind, error) {
 	var gvr schema.GroupVersionResource
 	var err error
-	if len(o.APIVersion) == 0 {
-		gvr, _, err = explain.SplitAndParseResourceRequestWithMatchingPrefix(name, o.Mapper)
+	if len(o.apiVersion) == 0 {
+		gvr, _, err = explain.SplitAndParseResourceRequestWithMatchingPrefix(name, o.mapper)
 	} else {
-		gvr, _, err = explain.SplitAndParseResourceRequest(name, o.Mapper)
+		gvr, _, err = explain.SplitAndParseResourceRequest(name, o.mapper)
 	}
 	if err != nil {
-		return schema.GroupVersionKind{}, fmt.Errorf("get the group version resource by %s %s: %w", o.APIVersion, name, err)
+		return schema.GroupVersionKind{}, fmt.Errorf("get the group version resource by %s %s: %w", o.apiVersion, name, err)
 	}
 
-	gvk, err := o.Mapper.KindFor(gvr)
+	gvk, err := o.mapper.KindFor(gvr)
 	if err != nil {
 		return schema.GroupVersionKind{}, fmt.Errorf("get a partial resource: %w", err)
 	}
 	if gvk.Empty() {
-		gvk, err = o.Mapper.KindFor(gvr.GroupResource().WithVersion(""))
+		gvk, err = o.mapper.KindFor(gvr.GroupResource().WithVersion(""))
 		if err != nil {
 			return schema.GroupVersionKind{}, fmt.Errorf("get a partial resource: %w", err)
 		}
 	}
 
-	if len(o.APIVersion) != 0 {
-		apiVer, err := schema.ParseGroupVersion(o.APIVersion)
+	if len(o.apiVersion) != 0 {
+		apiVer, err := schema.ParseGroupVersion(o.apiVersion)
 		if err != nil {
-			return schema.GroupVersionKind{}, fmt.Errorf("parse group version by %s: %w", o.APIVersion, err)
+			return schema.GroupVersionKind{}, fmt.Errorf("parse group version by %s: %w", o.apiVersion, err)
 		}
 		gvk = apiVer.WithKind(gvk.Kind)
 	}

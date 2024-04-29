@@ -76,8 +76,8 @@ func TestOptions_getGVK(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(fmt.Sprintf("Get gvk by %s %s", tt.apiVersion, tt.resourceName), func(t *testing.T) {
 			o := &Options{
-				APIVersion: tt.apiVersion,
-				Mapper:     mapper,
+				apiVersion: tt.apiVersion,
+				mapper:     mapper,
 			}
 			got, err := o.getGVK(tt.resourceName)
 			if tt.wantErr == "" {
@@ -239,7 +239,7 @@ func TestOptions_listGVKs(t *testing.T) {
 	dc := discovery.NewDiscoveryClientForConfigOrDie(&restclient.Config{Host: server.URL})
 	tdc := &testDiscoverClient{dc}
 	o := &Options{
-		Discovery: tdc,
+		discovery: tdc,
 	}
 	got, err := o.listGVKs()
 	assert.Nil(t, err)
