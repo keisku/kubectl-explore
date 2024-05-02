@@ -31,8 +31,8 @@ jobs:
         sudo install kubectl-explore /usr/local/bin
     - name: Run kubectl-explore
       run: |
-        sudo microk8s kubectl explore hpa.*own.*id > /dev/null
-        sudo microk8s kubectl explore provider > /dev/null
-        sudo microk8s kubectl explore statefulset.spec.template.spec.volumes.projected.sources.serviceAccountToken.expirationSeconds > /dev/null
-        sudo microk8s kubectl explore sts.spec.template.spec.volumes.projected.sources.serviceAccountToken.expirationSeconds > /dev/null
-        sudo microk8s kubectl explore sts.spec.template.spec.volumes.projected.sources.serviceAccountToken.expir > /dev/null
+        diff <(sudo microk8s kubectl explore no.*pro | tr -d '[:space:]') <(sudo microk8s kubectl explain node.spec.providerID | tr -d [':space:'])
+        diff <(sudo microk8s kubectl explore node.*pro | tr -d '[:space:]') <(sudo microk8s kubectl explain node.spec.providerID | tr -d [':space:'])
+        diff <(sudo microk8s kubectl explore nodes.*pro | tr -d '[:space:]') <(sudo microk8s kubectl explain node.spec.providerID | tr -d [':space:'])
+        diff <(sudo microk8s kubectl explore provider | tr -d '[:space:]') <(sudo microk8s kubectl explain node.spec.providerID | tr -d [':space:'])
+        diff <(sudo microk8s kubectl explore hpa.*own.*id | tr -d '[:space:]') <(sudo microk8s kubectl explain horizontalpodautoscaler.metadata.ownerReferences.uid | tr -d [':space:'])
