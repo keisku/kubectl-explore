@@ -8,7 +8,7 @@ jobs:
   test:
     strategy:
       matrix:
-        microk8s: [1.29/stable, 1.30/stable]
+        microk8s: [1.25/stable, 1.26/stable, 1.27/stable, 1.28/stable, 1.29/stable, 1.30/stable]
         os: [ubuntu-latest]
     runs-on: ubuntu-latest
     steps:
