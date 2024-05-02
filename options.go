@@ -14,6 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/client-go/discovery"
+	openapiclient "k8s.io/client-go/openapi"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/kube-openapi/pkg/util/proto"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
@@ -28,13 +29,14 @@ type Options struct {
 
 	// After completion
 	inputFieldPathRegex *regexp.Regexp
-	gvks                []schema.GroupVersionKind
+	gvrs                []gvrWithFields
 
 	// Dependencies
 	genericclioptions.IOStreams
-	mapper    meta.RESTMapper
-	discovery discovery.CachedDiscoveryInterface
-	schema    openapi.Resources
+	discovery             discovery.CachedDiscoveryInterface
+	mapper                meta.RESTMapper
+	schema                openapi.Resources
+	cachedOpenAPIV3Client openapiclient.Client
 }
 
 func NewCmd() *cobra.Command {
@@ -79,6 +81,11 @@ kubectl explore --context=onecontext
 	return cmd
 }
 
+// Copy from https://github.com/kubernetes/kubectl/blob/4f380d07c5e5bb41a037a72c4b35c7f828ba2d59/pkg/cmd/cmd.go#L95-L97
+func defaultConfigFlags() *genericclioptions.ConfigFlags {
+	return genericclioptions.NewConfigFlags(true).WithDeprecatedPasswordFlag().WithDiscoveryBurst(300).WithDiscoveryQPS(50.0)
+}
+
 func NewOptions(streams genericclioptions.IOStreams) *Options {
 	return &Options{
 		IOStreams: streams,
@@ -108,58 +115,75 @@ func (o *Options) Complete(f cmdutil.Factory, args []string) error {
 	if err != nil {
 		return err
 	}
-	if o.inputFieldPath == "" {
-		gvk, err := o.findGVK()
+	if c, err := f.OpenAPIV3Client(); err == nil {
+		o.cachedOpenAPIV3Client, err = newCachedOpenAPIClient(c)
 		if err != nil {
 			return err
 		}
-		o.gvks = []schema.GroupVersionKind{gvk}
 	} else {
-		var gvk schema.GroupVersionKind
-		var err error
-		var idx int
-		for i := 1; i <= len(o.inputFieldPath); i++ {
-			gvk, err = o.getGVK(o.inputFieldPath[:i])
-			if err != nil {
-				continue
-			}
-			idx = i
-			break
-		}
-		if gvk.Empty() {
-			o.gvks, err = o.listGVKs()
-			if err != nil {
-				return err
-			}
-		} else {
-			// In this case, the input includes the resource name.
-
-			// The left part of the input should be the resource name.
-			// E.g., "hpa", "statefulset", "node", etc.
-			left := o.inputFieldPath[:idx]
-
-			// The right part of the input should be the field or regex.
-			// E.g., "spec.template.spec.volumes.projected.sources.serviceAcc ", "spec.*containers", "spec.providerID", etc.
-			right := strings.TrimLeft(o.inputFieldPath, left)
-
-			o.inputFieldPathRegex, err = regexp.Compile(right)
-			if err != nil {
-				return err
-			}
-			o.gvks = []schema.GroupVersionKind{gvk}
-		}
+		return err
 	}
+
+	if o.inputFieldPath == "" {
+		gvr, err := o.findGVR()
+		if err != nil {
+			return err
+		}
+		o.gvrs = []gvrWithFields{gvr}
+		return nil
+	}
+
+	var gvr gvrWithFields
+	var idx int
+	// Find the first valid resource name in the inputFieldPath.
+	for i := 1; i <= len(o.inputFieldPath); i++ {
+		gvr, err = o.getGVR(o.inputFieldPath[:i])
+		if err != nil {
+			continue
+		}
+		idx = i
+		break
+	}
+	// If the inputFieldPath does not contain a valid resource name,
+	// inputFiledPath is treated as a regex directly.
+	if gvr.Empty() {
+		o.gvrs, err = o.listGVRs()
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+	// Overwrite the regex if the inputFieldPath contains a valid resource name.
+	var re string
+	if strings.HasPrefix(o.inputFieldPath, gvr.Resource) {
+		re = strings.TrimLeft(o.inputFieldPath, gvr.Resource)
+	} else if strings.HasPrefix(o.inputFieldPath, gvr.singularResource()) {
+		re = strings.TrimLeft(o.inputFieldPath, gvr.singularResource())
+	} else {
+		left := o.inputFieldPath[:idx]
+		re = strings.TrimLeft(o.inputFieldPath, left)
+	}
+	o.inputFieldPathRegex, err = regexp.Compile(re)
+	if err != nil {
+		return err
+	}
+	o.gvrs = []gvrWithFields{gvr}
+
 	return nil
 }
 
 func (o *Options) Run() error {
 	pathExplainers := make(map[string]explainer)
 	var paths []string
-	for _, gvk := range o.gvks {
+	for _, gvr := range o.gvrs {
 		visitor := &schemaVisitor{
 			pathSchema: make(map[string]proto.Schema),
-			prevPath:   strings.ToLower(gvk.Kind),
+			prevPath:   strings.ToLower(gvr.Resource),
 			err:        nil,
+		}
+		gvk, err := o.mapper.KindFor(gvr.GroupVersionResource)
+		if err != nil {
+			return fmt.Errorf("get the group version kind: %w", err)
 		}
 		s := o.schema.LookupResource(gvk)
 		if s == nil {
@@ -174,9 +198,8 @@ func (o *Options) Run() error {
 		})
 		for _, p := range filteredPaths {
 			pathExplainers[p] = explainer{
-				schemaByGvk: s,
-				gvk:         gvk,
-				pathSchema:  visitor.pathSchema,
+				gvr:             gvr,
+				openAPIV3Client: o.cachedOpenAPIV3Client,
 			}
 			paths = append(paths, p)
 		}
@@ -208,36 +231,25 @@ func (o *Options) Run() error {
 	return pathExplainers[paths[idx]].explain(o.Out, paths[idx])
 }
 
-func (o *Options) findGVK() (schema.GroupVersionKind, error) {
-	gvks, err := o.listGVKs()
-	if err != nil {
-		return schema.GroupVersionKind{}, err
-	}
-	idx, err := fuzzyfinder.Find(gvks, func(i int) string {
-		return strings.ToLower(gvks[i].Kind)
-	}, fuzzyfinder.WithPreviewWindow(func(i, _, _ int) string {
-		if i < 0 {
-			return ""
-		}
-		return gvks[i].String()
-	}))
-	if err != nil {
-		return schema.GroupVersionKind{}, fmt.Errorf("fuzzy find the API resource: %w", err)
-	}
-	return gvks[idx], nil
+type gvrWithFields struct {
+	schema.GroupVersionResource
+	fields []string
 }
 
-// listGVKs returns a list of GroupVersionKinds that is sorted in alphabetical order.
-func (o *Options) listGVKs() ([]schema.GroupVersionKind, error) {
-	resourceList, err := o.discovery.ServerPreferredResources()
+func (g gvrWithFields) singularResource() string {
+	if strings.HasSuffix(g.Resource, "s") {
+		return g.Resource[:len(g.Resource)-1]
+	}
+	return g.Resource
+}
+
+func (o *Options) listGVRs() ([]gvrWithFields, error) {
+	lists, err := o.discovery.ServerPreferredResources()
 	if err != nil {
-		return nil, fmt.Errorf("get all API resources: %w", err)
+		return nil, err
 	}
-	if len(resourceList) == 0 {
-		return nil, fmt.Errorf("API resources are not found")
-	}
-	var gvks []schema.GroupVersionKind
-	for _, list := range resourceList {
+	var gvrs []gvrWithFields
+	for _, list := range lists {
 		if len(list.APIResources) == 0 {
 			continue
 		}
@@ -245,54 +257,52 @@ func (o *Options) listGVKs() ([]schema.GroupVersionKind, error) {
 		if err != nil {
 			continue
 		}
-		for _, r := range list.APIResources {
-			gvks = append(gvks, schema.GroupVersionKind{
-				Group:   gv.Group,
-				Version: gv.Version,
-				Kind:    r.Kind,
+		for _, resource := range list.APIResources {
+			gvr := gv.WithResource(resource.Name)
+			gvrs = append(gvrs, gvrWithFields{
+				GroupVersionResource: gvr,
 			})
 		}
 	}
-	sort.SliceStable(gvks, func(i, j int) bool {
-		return gvks[i].Kind < gvks[j].Kind
+	sort.SliceStable(gvrs, func(i, j int) bool {
+		return gvrs[i].String() < gvrs[j].String()
 	})
-	return gvks, nil
+	return gvrs, nil
 }
 
-func (o *Options) getGVK(name string) (schema.GroupVersionKind, error) {
+func (o *Options) findGVR() (gvrWithFields, error) {
+	gvrs, err := o.listGVRs()
+	if err != nil {
+		return gvrWithFields{}, err
+	}
+	idx, err := fuzzyfinder.Find(gvrs, func(i int) string {
+		return gvrs[i].Resource
+	}, fuzzyfinder.WithPreviewWindow(func(i, _, _ int) string {
+		if i < 0 {
+			return ""
+		}
+		return gvrs[i].String()
+	}))
+	if err != nil {
+		return gvrWithFields{}, fmt.Errorf("fuzzy find the API resource: %w", err)
+	}
+	return gvrs[idx], nil
+}
+
+func (o *Options) getGVR(name string) (gvrWithFields, error) {
 	var gvr schema.GroupVersionResource
+	var fields []string
 	var err error
 	if len(o.apiVersion) == 0 {
-		gvr, _, err = explain.SplitAndParseResourceRequestWithMatchingPrefix(name, o.mapper)
+		gvr, fields, err = explain.SplitAndParseResourceRequestWithMatchingPrefix(name, o.mapper)
 	} else {
-		gvr, _, err = explain.SplitAndParseResourceRequest(name, o.mapper)
+		gvr, fields, err = explain.SplitAndParseResourceRequest(name, o.mapper)
 	}
 	if err != nil {
-		return schema.GroupVersionKind{}, fmt.Errorf("get the group version resource by %s %s: %w", o.apiVersion, name, err)
+		return gvrWithFields{}, fmt.Errorf("get the group version resource by %s %s: %w", o.apiVersion, name, err)
 	}
-
-	gvk, err := o.mapper.KindFor(gvr)
-	if err != nil {
-		return schema.GroupVersionKind{}, fmt.Errorf("get a partial resource: %w", err)
-	}
-	if gvk.Empty() {
-		gvk, err = o.mapper.KindFor(gvr.GroupResource().WithVersion(""))
-		if err != nil {
-			return schema.GroupVersionKind{}, fmt.Errorf("get a partial resource: %w", err)
-		}
-	}
-
-	if len(o.apiVersion) != 0 {
-		apiVer, err := schema.ParseGroupVersion(o.apiVersion)
-		if err != nil {
-			return schema.GroupVersionKind{}, fmt.Errorf("parse group version by %s: %w", o.apiVersion, err)
-		}
-		gvk = apiVer.WithKind(gvk.Kind)
-	}
-	return gvk, nil
-}
-
-// Copy from https://github.com/kubernetes/kubectl/blob/4f380d07c5e5bb41a037a72c4b35c7f828ba2d59/pkg/cmd/cmd.go#L95-L97
-func defaultConfigFlags() *genericclioptions.ConfigFlags {
-	return genericclioptions.NewConfigFlags(true).WithDeprecatedPasswordFlag().WithDiscoveryBurst(300).WithDiscoveryQPS(50.0)
+	return gvrWithFields{
+		GroupVersionResource: gvr,
+		fields:               fields,
+	}, nil
 }
