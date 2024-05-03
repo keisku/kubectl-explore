@@ -29,7 +29,7 @@ type Options struct {
 
 	// After completion
 	inputFieldPathRegex *regexp.Regexp
-	gvrs                []gvrWithFields
+	gvrs                []schema.GroupVersionResource
 
 	// Dependencies
 	genericclioptions.IOStreams
@@ -125,19 +125,19 @@ func (o *Options) Complete(f cmdutil.Factory, args []string) error {
 	}
 
 	if o.inputFieldPath == "" {
-		gvr, err := o.findGVR()
+		g, err := o.findGVR()
 		if err != nil {
 			return err
 		}
-		o.gvrs = []gvrWithFields{gvr}
+		o.gvrs = []schema.GroupVersionResource{g}
 		return nil
 	}
 
-	var gvr gvrWithFields
+	var gotGVR schema.GroupVersionResource
 	var idx int
 	// Find the first valid resource name in the inputFieldPath.
 	for i := 1; i <= len(o.inputFieldPath); i++ {
-		gvr, err = o.getGVR(o.inputFieldPath[:i])
+		gotGVR, err = GetGVR(o, o.inputFieldPath[:i])
 		if err != nil {
 			continue
 		}
@@ -146,7 +146,7 @@ func (o *Options) Complete(f cmdutil.Factory, args []string) error {
 	}
 	// If the inputFieldPath does not contain a valid resource name,
 	// inputFiledPath is treated as a regex directly.
-	if gvr.Empty() {
+	if gotGVR.Empty() {
 		o.gvrs, err = o.listGVRs()
 		if err != nil {
 			return err
@@ -155,11 +155,14 @@ func (o *Options) Complete(f cmdutil.Factory, args []string) error {
 	}
 	// Overwrite the regex if the inputFieldPath contains a valid resource name.
 	var re string
-	if strings.HasPrefix(o.inputFieldPath, gvr.Resource) {
-		re = strings.TrimLeft(o.inputFieldPath, gvr.Resource)
-	} else if strings.HasPrefix(o.inputFieldPath, gvr.singularResource()) {
-		re = strings.TrimLeft(o.inputFieldPath, gvr.singularResource())
+	if strings.HasPrefix(o.inputFieldPath, gotGVR.Resource) {
+		// E.g., "nodes.*spec" -> ".*spec"
+		re = strings.TrimLeft(o.inputFieldPath, gotGVR.Resource)
+	} else if strings.HasPrefix(o.inputFieldPath, singularResource(gotGVR.Resource)) {
+		// E.g., "node.*spec" -> ".*spec"
+		re = strings.TrimLeft(o.inputFieldPath, singularResource(gotGVR.Resource))
 	} else {
+		// E.g., "no.*spec" -> ".*spec"
 		left := o.inputFieldPath[:idx]
 		re = strings.TrimLeft(o.inputFieldPath, left)
 	}
@@ -167,7 +170,7 @@ func (o *Options) Complete(f cmdutil.Factory, args []string) error {
 	if err != nil {
 		return err
 	}
-	o.gvrs = []gvrWithFields{gvr}
+	o.gvrs = []schema.GroupVersionResource{gotGVR}
 
 	return nil
 }
@@ -181,7 +184,7 @@ func (o *Options) Run() error {
 			prevPath:   strings.ToLower(gvr.Resource),
 			err:        nil,
 		}
-		gvk, err := o.mapper.KindFor(gvr.GroupVersionResource)
+		gvk, err := o.mapper.KindFor(gvr)
 		if err != nil {
 			return fmt.Errorf("get the group version kind: %w", err)
 		}
@@ -231,24 +234,19 @@ func (o *Options) Run() error {
 	return pathExplainers[paths[idx]].explain(o.Out, paths[idx])
 }
 
-type gvrWithFields struct {
-	schema.GroupVersionResource
-	fields []string
-}
-
-func (g gvrWithFields) singularResource() string {
-	if strings.HasSuffix(g.Resource, "s") {
-		return g.Resource[:len(g.Resource)-1]
+func singularResource(resource string) string {
+	if strings.HasSuffix(resource, "s") {
+		return resource[:len(resource)-1]
 	}
-	return g.Resource
+	return resource
 }
 
-func (o *Options) listGVRs() ([]gvrWithFields, error) {
+func (o *Options) listGVRs() ([]schema.GroupVersionResource, error) {
 	lists, err := o.discovery.ServerPreferredResources()
 	if err != nil {
 		return nil, err
 	}
-	var gvrs []gvrWithFields
+	var gvrs []schema.GroupVersionResource
 	for _, list := range lists {
 		if len(list.APIResources) == 0 {
 			continue
@@ -258,10 +256,7 @@ func (o *Options) listGVRs() ([]gvrWithFields, error) {
 			continue
 		}
 		for _, resource := range list.APIResources {
-			gvr := gv.WithResource(resource.Name)
-			gvrs = append(gvrs, gvrWithFields{
-				GroupVersionResource: gvr,
-			})
+			gvrs = append(gvrs, gv.WithResource(resource.Name))
 		}
 	}
 	sort.SliceStable(gvrs, func(i, j int) bool {
@@ -270,10 +265,10 @@ func (o *Options) listGVRs() ([]gvrWithFields, error) {
 	return gvrs, nil
 }
 
-func (o *Options) findGVR() (gvrWithFields, error) {
+func (o *Options) findGVR() (schema.GroupVersionResource, error) {
 	gvrs, err := o.listGVRs()
 	if err != nil {
-		return gvrWithFields{}, err
+		return schema.GroupVersionResource{}, err
 	}
 	idx, err := fuzzyfinder.Find(gvrs, func(i int) string {
 		return gvrs[i].Resource
@@ -284,25 +279,26 @@ func (o *Options) findGVR() (gvrWithFields, error) {
 		return gvrs[i].String()
 	}))
 	if err != nil {
-		return gvrWithFields{}, fmt.Errorf("fuzzy find the API resource: %w", err)
+		return schema.GroupVersionResource{}, fmt.Errorf("fuzzy find the API resource: %w", err)
 	}
 	return gvrs[idx], nil
 }
 
-func (o *Options) getGVR(name string) (gvrWithFields, error) {
-	var gvr schema.GroupVersionResource
-	var fields []string
+// TODO: Find a way to mock meta.RESTMapper to avoid defining it as a variable.
+var GetGVR = func(o *Options, name string) (schema.GroupVersionResource, error) {
+	return o.getGVR(name)
+}
+
+func (o *Options) getGVR(name string) (schema.GroupVersionResource, error) {
+	var ret schema.GroupVersionResource
 	var err error
 	if len(o.apiVersion) == 0 {
-		gvr, fields, err = explain.SplitAndParseResourceRequestWithMatchingPrefix(name, o.mapper)
+		ret, _, err = explain.SplitAndParseResourceRequestWithMatchingPrefix(name, o.mapper)
 	} else {
-		gvr, fields, err = explain.SplitAndParseResourceRequest(name, o.mapper)
+		ret, _, err = explain.SplitAndParseResourceRequest(name, o.mapper)
 	}
 	if err != nil {
-		return gvrWithFields{}, fmt.Errorf("get the group version resource by %s %s: %w", o.apiVersion, name, err)
+		return schema.GroupVersionResource{}, fmt.Errorf("get the group version resource by %s %s: %w", o.apiVersion, name, err)
 	}
-	return gvrWithFields{
-		GroupVersionResource: gvr,
-		fields:               fields,
-	}, nil
+	return ret, nil
 }

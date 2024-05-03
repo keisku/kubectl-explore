@@ -5,12 +5,13 @@ import (
 	"io"
 	"strings"
 
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	openapiclient "k8s.io/client-go/openapi"
 	explainv2 "k8s.io/kubectl/pkg/explain/v2"
 )
 
 type explainer struct {
-	gvr             gvrWithFields
+	gvr             schema.GroupVersionResource
 	openAPIV3Client openapiclient.Client
 }
 
@@ -27,7 +28,7 @@ func (e explainer) explain(w io.Writer, path string) error {
 		fields,
 		w,
 		e.openAPIV3Client,
-		e.gvr.GroupVersionResource,
+		e.gvr,
 		false,
 		"plaintext",
 	)
