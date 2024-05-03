@@ -159,14 +159,14 @@ func (o *Options) Complete(f cmdutil.Factory, args []string) error {
 	var re string
 	if strings.HasPrefix(o.inputFieldPath, gotGVR.Resource) {
 		// E.g., "nodes.*spec" -> ".*spec"
-		re = strings.TrimLeft(o.inputFieldPath, gotGVR.Resource)
+		re = strings.TrimPrefix(o.inputFieldPath, gotGVR.Resource)
 	} else if strings.HasPrefix(o.inputFieldPath, singularResource(gotGVR.Resource)) {
 		// E.g., "node.*spec" -> ".*spec"
-		re = strings.TrimLeft(o.inputFieldPath, singularResource(gotGVR.Resource))
+		re = strings.TrimPrefix(o.inputFieldPath, singularResource(gotGVR.Resource))
 	} else {
 		// E.g., "no.*spec" -> ".*spec"
-		left := o.inputFieldPath[:idx]
-		re = strings.TrimLeft(o.inputFieldPath, left)
+		prefix := o.inputFieldPath[:idx]
+		re = strings.TrimPrefix(o.inputFieldPath, prefix)
 	}
 	o.inputFieldPathRegex, err = regexp.Compile(re)
 	if err != nil {
