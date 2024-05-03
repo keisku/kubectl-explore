@@ -8,7 +8,7 @@ jobs:
   test:
     strategy:
       matrix:
-        microk8s: [1.25/stable, 1.26/stable, 1.27/stable, 1.28/stable, 1.29/stable, 1.30/stable]
+        k8s-minor: [25, 26, 27, 28, 29, 30]
         os: [ubuntu-latest]
     runs-on: ubuntu-latest
     steps:
@@ -17,7 +17,7 @@ jobs:
         fetch-depth: 0
     - name: Install microk8s
       run: |
-        sudo snap install microk8s --classic --channel=${{ matrix.microk8s }}
+        sudo snap install microk8s --classic --channel=1.${{ matrix.k8s-minor }}/stable
     - name: Install Go
       uses: actions/setup-go@v5
     - name: go vet
@@ -29,10 +29,13 @@ jobs:
         go build
         chmod +x kubectl-explore
         sudo install kubectl-explore /usr/local/bin
-    - name: Run kubectl-explore
+    - name: Compare whether the outputs of kubectl-explore and kubectl-explain are the same
       run: |
         diff <(sudo microk8s kubectl explore no.*pro | tr -d '[:space:]') <(sudo microk8s kubectl explain node.spec.providerID | tr -d [':space:'])
         diff <(sudo microk8s kubectl explore node.*pro | tr -d '[:space:]') <(sudo microk8s kubectl explain node.spec.providerID | tr -d [':space:'])
         diff <(sudo microk8s kubectl explore nodes.*pro | tr -d '[:space:]') <(sudo microk8s kubectl explain node.spec.providerID | tr -d [':space:'])
         diff <(sudo microk8s kubectl explore provider | tr -d '[:space:]') <(sudo microk8s kubectl explain node.spec.providerID | tr -d [':space:'])
+    - name: Since 1.27+, kubectl-explain has been upgraded to v2 which enables OpenAPI v3 by default
+      run: |
         diff <(sudo microk8s kubectl explore hpa.*own.*id | tr -d '[:space:]') <(sudo microk8s kubectl explain horizontalpodautoscaler.metadata.ownerReferences.uid | tr -d [':space:'])
+      if: 26 < ${{ matrix.k8s-minor }}
