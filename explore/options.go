@@ -137,10 +137,11 @@ func (o *Options) Complete(f cmdutil.Factory, args []string) error {
 	var idx int
 	// Find the first valid resource name in the inputFieldPath.
 	for i := 1; i <= len(o.inputFieldPath); i++ {
-		gotGVR, err = o.getGVR(o.inputFieldPath[:i])
+		ret, err := GetGVR(o, o.inputFieldPath[:i])
 		if err != nil {
 			continue
 		}
+		gotGVR = gvr{ret}
 		idx = i
 		break
 	}
@@ -286,7 +287,12 @@ func (o *Options) findGVR() (gvr, error) {
 	return gvrs[idx], nil
 }
 
-func (o *Options) getGVR(name string) (gvr, error) {
+// TODO: Find a way to mock meta.RESTMapper to avoid defining it as a variable.
+var GetGVR = func(o *Options, name string) (schema.GroupVersionResource, error) {
+	return o.getGVR(name)
+}
+
+func (o *Options) getGVR(name string) (schema.GroupVersionResource, error) {
 	var ret schema.GroupVersionResource
 	var err error
 	if len(o.apiVersion) == 0 {
@@ -295,7 +301,7 @@ func (o *Options) getGVR(name string) (gvr, error) {
 		ret, _, err = explain.SplitAndParseResourceRequest(name, o.mapper)
 	}
 	if err != nil {
-		return gvr{}, fmt.Errorf("get the group version resource by %s %s: %w", o.apiVersion, name, err)
+		return schema.GroupVersionResource{}, fmt.Errorf("get the group version resource by %s %s: %w", o.apiVersion, name, err)
 	}
-	return gvr{ret}, nil
+	return ret, nil
 }

@@ -3,8 +3,10 @@ module github.com/keisku/kubectl-explore
 go 1.22.2
 
 require (
+	github.com/google/gnostic v0.7.0
 	github.com/ktr0731/go-fuzzyfinder v0.8.0
 	github.com/spf13/cobra v1.8.0
+	github.com/stretchr/testify v1.9.0
 	k8s.io/apimachinery v0.30.0
 	k8s.io/cli-runtime v0.30.0
 	k8s.io/client-go v0.30.0
@@ -57,10 +59,10 @@ require (
 	github.com/nsf/termbox-go v1.1.1 // indirect
 	github.com/peterbourgon/diskv v2.0.1+incompatible // indirect
 	github.com/pkg/errors v0.9.1 // indirect
+	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
-	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/xlab/treeprint v1.2.0 // indirect
 	go.starlark.net v0.0.0-20240411212711-9b43f0afd521 // indirect
 	golang.org/x/net v0.24.0 // indirect
