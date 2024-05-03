@@ -1,45 +1,34 @@
 package main
 
 import (
-	"fmt"
+	"errors"
 	"io"
 	"strings"
 
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/kube-openapi/pkg/util/proto"
-	"k8s.io/kubectl/pkg/explain"
+	openapiclient "k8s.io/client-go/openapi"
+	explainv2 "k8s.io/kubectl/pkg/explain/v2"
 )
 
 type explainer struct {
-	schemaByGvk proto.Schema
-	gvk         schema.GroupVersionKind
-	pathSchema  map[string]proto.Schema
+	gvr             gvrWithFields
+	openAPIV3Client openapiclient.Client
 }
 
-// explain explains the field associated with the given path.
 func (e explainer) explain(w io.Writer, path string) error {
 	if path == "" {
-		return fmt.Errorf("path is empty: gvk=%s", e.gvk)
+		return errors.New("path must be provided")
 	}
-	// This is the case that path specifies the top-level field,
-	// for example, "pod.spec", "pod.metadata"
-	if strings.Count(path, ".") == 1 {
-		fieldPath := []string{path[strings.LastIndex(path, ".")+1:]}
-		return explain.PrintModelDescription(fieldPath, w, e.schemaByGvk, e.gvk, false)
+	fields := strings.Split(path, ".")
+	if len(fields) > 0 {
+		// Remove resource name
+		fields = fields[1:]
 	}
-
-	// get the parent schema to explain.
-	// e.g. "pod.spec.containers.env" -> "pod.spec.containers"
-	parent, ok := e.pathSchema[path[:strings.LastIndex(path, ".")]]
-	if !ok {
-		return fmt.Errorf("cannot explain %q: not found", path)
-	}
-
-	// get the key from the path.
-	// e.g. "pod.spec.containers.env" -> "env"
-	fieldPath := []string{path[strings.LastIndex(path, ".")+1:]}
-	if err := explain.PrintModelDescription(fieldPath, w, parent, e.gvk, false); err != nil {
-		return fmt.Errorf("explain %q: %w", path, err)
-	}
-	return nil
+	return explainv2.PrintModelDescription(
+		fields,
+		w,
+		e.openAPIV3Client,
+		e.gvr.GroupVersionResource,
+		false,
+		"plaintext",
+	)
 }
