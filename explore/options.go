@@ -11,6 +11,7 @@ import (
 	"github.com/ktr0731/go-fuzzyfinder"
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/client-go/discovery"
@@ -18,7 +19,6 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/kube-openapi/pkg/util/proto"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
-	"k8s.io/kubectl/pkg/explain"
 	"k8s.io/kubectl/pkg/util/openapi"
 )
 
@@ -135,44 +135,54 @@ func (o *Options) Complete(f cmdutil.Factory, args []string) error {
 		return nil
 	}
 
-	var gotGVR schema.GroupVersionResource
-	var idx int
-	// Find the first valid resource name in the inputFieldPath.
-	for i := 1; i <= len(o.inputFieldPath); i++ {
-		gotGVR, err = GetGVR(o, o.inputFieldPath[:i])
-		if err != nil {
-			continue
+	gvarMap, gvrs, err := o.discover()
+	if err != nil {
+		return err
+	}
+
+	var gvar *groupVersionAPIResource
+	var resourceIdx int
+	for i := len(o.inputFieldPath); i > 0; i-- {
+		var ok bool
+		gvar, ok = gvarMap[o.inputFieldPath[:i]]
+		if ok {
+			resourceIdx = i
+			break
 		}
-		idx = i
-		break
 	}
 	// If the inputFieldPath does not contain a valid resource name,
-	// inputFiledPath is treated as a regex directly.
-	if gotGVR.Empty() {
-		o.gvrs, err = o.listGVRs()
-		if err != nil {
-			return err
-		}
+	// inputFiledPath is treated as a regex.
+	if gvar == nil {
+		o.gvrs = gvrs
 		return nil
 	}
 	// Overwrite the regex if the inputFieldPath contains a valid resource name.
+	_, ok := gvarMap[o.inputFieldPath[:resourceIdx]]
+	if !ok {
+		return fmt.Errorf("no resource found for %s", o.inputFieldPath)
+	}
 	var re string
-	if strings.HasPrefix(o.inputFieldPath, gotGVR.Resource) {
-		// E.g., "nodes.*spec" -> ".*spec"
-		re = strings.TrimPrefix(o.inputFieldPath, gotGVR.Resource)
-	} else if strings.HasPrefix(o.inputFieldPath, singularResource(gotGVR.Resource)) {
-		// E.g., "node.*spec" -> ".*spec"
-		re = strings.TrimPrefix(o.inputFieldPath, singularResource(gotGVR.Resource))
+	if strings.HasPrefix(o.inputFieldPath, gvar.Resource) {
+		re = strings.TrimPrefix(o.inputFieldPath, gvar.Resource)
+	} else if strings.HasPrefix(o.inputFieldPath, gvar.Kind) {
+		re = strings.TrimPrefix(o.inputFieldPath, gvar.Kind)
+	} else if strings.HasPrefix(o.inputFieldPath, gvar.SingularName) {
+		re = strings.TrimPrefix(o.inputFieldPath, gvar.SingularName)
 	} else {
-		// E.g., "no.*spec" -> ".*spec"
-		prefix := o.inputFieldPath[:idx]
-		re = strings.TrimPrefix(o.inputFieldPath, prefix)
+		for _, shortName := range gvar.ShortNames {
+			if strings.HasPrefix(o.inputFieldPath, shortName) {
+				re = strings.TrimPrefix(o.inputFieldPath, shortName)
+			}
+		}
+	}
+	if re == "" {
+		return fmt.Errorf("cannot find resource name in %s", o.inputFieldPath)
 	}
 	o.inputFieldPathRegex, err = regexp.Compile(re)
 	if err != nil {
 		return err
 	}
-	o.gvrs = []schema.GroupVersionResource{gotGVR}
+	o.gvrs = []schema.GroupVersionResource{gvar.GroupVersionResource}
 
 	return nil
 }
@@ -237,13 +247,6 @@ func (o *Options) Run() error {
 	return pathExplainers[paths[idx]].explain(o.Out, paths[idx])
 }
 
-func singularResource(resource string) string {
-	if strings.HasSuffix(resource, "s") {
-		return resource[:len(resource)-1]
-	}
-	return resource
-}
-
 func (o *Options) listGVRs() ([]schema.GroupVersionResource, error) {
 	lists, err := o.discovery.ServerPreferredResources()
 	if err != nil {
@@ -287,21 +290,43 @@ func (o *Options) findGVR() (schema.GroupVersionResource, error) {
 	return gvrs[idx], nil
 }
 
-// TODO: Find a way to mock meta.RESTMapper to avoid defining it as a variable.
-var GetGVR = func(o *Options, name string) (schema.GroupVersionResource, error) {
-	return o.getGVR(name)
+type groupVersionAPIResource struct {
+	schema.GroupVersionResource
+	metav1.APIResource
 }
 
-func (o *Options) getGVR(name string) (schema.GroupVersionResource, error) {
-	var ret schema.GroupVersionResource
-	var err error
-	if len(o.apiVersion) == 0 {
-		ret, _, err = explain.SplitAndParseResourceRequestWithMatchingPrefix(name, o.mapper)
-	} else {
-		ret, _, err = explain.SplitAndParseResourceRequest(name, o.mapper)
-	}
+func (o *Options) discover() (map[string]*groupVersionAPIResource, []schema.GroupVersionResource, error) {
+	lists, err := o.discovery.ServerPreferredResources()
 	if err != nil {
-		return schema.GroupVersionResource{}, fmt.Errorf("get the group version resource by %s %s: %w", o.apiVersion, name, err)
+		return nil, nil, err
 	}
-	return ret, nil
+	var gvrs []schema.GroupVersionResource
+	m := make(map[string]*groupVersionAPIResource)
+	for _, list := range lists {
+		if len(list.APIResources) == 0 {
+			continue
+		}
+		gv, err := schema.ParseGroupVersion(list.GroupVersion)
+		if err != nil {
+			continue
+		}
+		for _, resource := range list.APIResources {
+			gvr := gv.WithResource(resource.Name)
+			gvrs = append(gvrs, gvr)
+			r := groupVersionAPIResource{
+				GroupVersionResource: gvr,
+				APIResource:          resource,
+			}
+			m[resource.Name] = &r
+			m[resource.Kind] = &r
+			m[resource.SingularName] = &r
+			for _, shortName := range resource.ShortNames {
+				m[shortName] = &r
+			}
+		}
+	}
+	sort.SliceStable(gvrs, func(i, j int) bool {
+		return gvrs[i].String() < gvrs[j].String()
+	})
+	return m, gvrs, nil
 }

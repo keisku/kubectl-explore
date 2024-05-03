@@ -17,7 +17,6 @@ import (
 	"github.com/keisku/kubectl-explore/explore"
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/client-go/discovery"
 	openapiclient "k8s.io/client-go/openapi"
@@ -188,22 +187,30 @@ func Test_Run(t *testing.T) {
 				},
 			},
 		},
-	}
-	explore.GetGVR = func(_ *explore.Options, inputFieldPath string) (schema.GroupVersionResource, error) {
-		node := schema.GroupVersionResource{Group: "", Version: "v1", Resource: "nodes"}
-		hpa := schema.GroupVersionResource{Group: "autoscaling", Version: "v2", Resource: "horizontalpodautoscalers"}
-		gvr, ok := map[string]schema.GroupVersionResource{
-			"no":                       node,
-			"node":                     node,
-			"nodes":                    node,
-			"hpa":                      hpa,
-			"horizontalpodautoscaler":  hpa,
-			"horizontalpodautoscalers": hpa,
-		}[inputFieldPath]
-		if !ok {
-			return schema.GroupVersionResource{}, fmt.Errorf("no resource found for %s", inputFieldPath)
-		}
-		return gvr, nil
+		{
+			GroupVersion: "storage.k8s.io/v1",
+			APIResources: []v1.APIResource{
+				{
+					Name:         "csistoragecapacities",
+					SingularName: "csistoragecapacity",
+					Namespaced:   true,
+					Kind:         "CSIStorageCapacity",
+					ShortNames:   []string{},
+				},
+			},
+		},
+		{
+			GroupVersion: "v1",
+			APIResources: []v1.APIResource{
+				{
+					Name:         "componentstatuses",
+					SingularName: "componentstatus",
+					Namespaced:   false,
+					Kind:         "ComponentStatus",
+					ShortNames:   []string{"cs"},
+				},
+			},
+		},
 	}
 	tests := []struct {
 		inputFieldPath string
@@ -254,6 +261,56 @@ func Test_Run(t *testing.T) {
 				"HorizontalPodAutoscaler",
 				"v2",
 				"PATH: horizontalpodautoscalers.metadata.ownerReferences.uid",
+			},
+		},
+		{
+			inputFieldPath: "horizontalpodautoscalers.*own.*id",
+			expectRunError: false,
+			expectKeywords: []string{
+				"autoscaling",
+				"HorizontalPodAutoscaler",
+				"v2",
+				"PATH: horizontalpodautoscalers.metadata.ownerReferences.uid",
+			},
+		},
+		{
+			inputFieldPath: "horizontalpodautoscaler.*own.*id",
+			expectRunError: false,
+			expectKeywords: []string{
+				"autoscaling",
+				"HorizontalPodAutoscaler",
+				"v2",
+				"PATH: horizontalpodautoscalers.metadata.ownerReferences.uid",
+			},
+		},
+		{
+			inputFieldPath: "csistoragecapacity.maximumVolumeSize",
+			expectRunError: false,
+			expectKeywords: []string{
+				"CSIStorageCapacity",
+				"storage.k8s.io",
+				"v1",
+				"PATH: csistoragecapacities.maximumVolumeSize",
+			},
+		},
+		{
+			inputFieldPath: "csistoragecapacities.maximumVolumeSize",
+			expectRunError: false,
+			expectKeywords: []string{
+				"CSIStorageCapacity",
+				"storage.k8s.io",
+				"v1",
+				"PATH: csistoragecapacities.maximumVolumeSize",
+			},
+		},
+		{
+			inputFieldPath: "CSIStorageCapacity.*VolumeSize",
+			expectRunError: false,
+			expectKeywords: []string{
+				"CSIStorageCapacity",
+				"storage.k8s.io",
+				"v1",
+				"PATH: csistoragecapacities.maximumVolumeSize",
 			},
 		},
 	}
