@@ -216,6 +216,7 @@ func Test_Run(t *testing.T) {
 			expectKeywords: []string{
 				"Node",
 				"providerID",
+				"PATH: nodes.spec.providerID",
 			},
 		},
 		{
@@ -224,6 +225,7 @@ func Test_Run(t *testing.T) {
 			expectKeywords: []string{
 				"Node",
 				"providerID",
+				"PATH: nodes.spec.providerID",
 			},
 		},
 		{
@@ -232,6 +234,7 @@ func Test_Run(t *testing.T) {
 			expectKeywords: []string{
 				"Node",
 				"providerID",
+				"PATH: nodes.spec.providerID",
 			},
 		},
 		{
@@ -240,6 +243,7 @@ func Test_Run(t *testing.T) {
 			expectKeywords: []string{
 				"Node",
 				"providerID",
+				"PATH: nodes.spec.providerID",
 			},
 		},
 		{
@@ -249,6 +253,7 @@ func Test_Run(t *testing.T) {
 				"autoscaling",
 				"HorizontalPodAutoscaler",
 				"v2",
+				"PATH: horizontalpodautoscalers.metadata.ownerReferences.uid",
 			},
 		},
 	}

@@ -31,11 +31,11 @@ jobs:
         sudo install kubectl-explore /usr/local/bin
     - name: Compare whether the outputs of kubectl-explore and kubectl-explain are the same
       run: |
-        diff <(sudo microk8s kubectl explore no.*pro | tr -d '[:space:]') <(sudo microk8s kubectl explain node.spec.providerID | tr -d [':space:'])
-        diff <(sudo microk8s kubectl explore node.*pro | tr -d '[:space:]') <(sudo microk8s kubectl explain node.spec.providerID | tr -d [':space:'])
-        diff <(sudo microk8s kubectl explore nodes.*pro | tr -d '[:space:]') <(sudo microk8s kubectl explain node.spec.providerID | tr -d [':space:'])
-        diff <(sudo microk8s kubectl explore provider | tr -d '[:space:]') <(sudo microk8s kubectl explain node.spec.providerID | tr -d [':space:'])
-    - name: Since 1.27+, kubectl-explain has been upgraded to v2 which enables OpenAPI v3 by default
+        diff <(sudo microk8s kubectl explore --disable-print-path no.*pro | tr -d '[:space:]') <(sudo microk8s kubectl explain node.spec.providerID | tr -d [':space:'])
+        diff <(sudo microk8s kubectl explore --disable-print-path node.*pro | tr -d '[:space:]') <(sudo microk8s kubectl explain node.spec.providerID | tr -d [':space:'])
+        diff <(sudo microk8s kubectl explore --disable-print-path nodes.*pro | tr -d '[:space:]') <(sudo microk8s kubectl explain node.spec.providerID | tr -d [':space:'])
+        diff <(sudo microk8s kubectl explore --disable-print-path provider | tr -d '[:space:]') <(sudo microk8s kubectl explain node.spec.providerID | tr -d [':space:'])
+    - name: Since 1.27+, kubectl-explain has --disable-print-path been upgraded to v2 which enables OpenAPI v3 by default
       run: |
-        diff <(sudo microk8s kubectl explore hpa.*own.*id | tr -d '[:space:]') <(sudo microk8s kubectl explain horizontalpodautoscaler.metadata.ownerReferences.uid | tr -d [':space:'])
+        diff <(sudo microk8s kubectl explore --disable-print-path hpa.*own.*id | tr -d '[:space:]') <(sudo microk8s kubectl explain horizontalpodautoscaler.metadata.ownerReferences.uid | tr -d [':space:'])
       if: ${{ 26 < matrix.k8s-minor }}
