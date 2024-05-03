@@ -2,6 +2,7 @@ package explore
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"strings"
 
@@ -13,6 +14,7 @@ import (
 type explainer struct {
 	gvr             schema.GroupVersionResource
 	openAPIV3Client openapiclient.Client
+	enablePrintPath bool
 }
 
 func (e explainer) explain(w io.Writer, path string) error {
@@ -23,6 +25,9 @@ func (e explainer) explain(w io.Writer, path string) error {
 	if len(fields) > 0 {
 		// Remove resource name
 		fields = fields[1:]
+	}
+	if e.enablePrintPath {
+		w.Write([]byte(fmt.Sprintf("PATH: %s\n", path)))
 	}
 	return explainv2.PrintModelDescription(
 		fields,

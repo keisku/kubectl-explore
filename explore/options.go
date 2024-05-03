@@ -24,8 +24,9 @@ import (
 
 type Options struct {
 	// User input
-	apiVersion     string
-	inputFieldPath string
+	apiVersion       string
+	inputFieldPath   string
+	disablePrintPath bool
 
 	// After completion
 	inputFieldPathRegex *regexp.Regexp
@@ -67,6 +68,7 @@ kubectl explore --context=onecontext
 `,
 	}
 	cmd.Flags().StringVar(&o.apiVersion, "api-version", o.apiVersion, "Get different explanations for particular API version (API group/version)")
+	cmd.Flags().BoolVar(&o.disablePrintPath, "disable-print-path", o.disablePrintPath, "Disable printing the path to explain")
 	kubeConfigFlags := defaultConfigFlags().WithWarningPrinter(o.IOStreams)
 	flags := cmd.PersistentFlags()
 	kubeConfigFlags.AddFlags(flags)
@@ -203,6 +205,7 @@ func (o *Options) Run() error {
 			pathExplainers[p] = explainer{
 				gvr:             gvr,
 				openAPIV3Client: o.cachedOpenAPIV3Client,
+				enablePrintPath: !o.disablePrintPath,
 			}
 			paths = append(paths, p)
 		}

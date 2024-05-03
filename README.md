@@ -54,6 +54,7 @@ Flags:
       --cluster string                 The name of the kubeconfig cluster to use
       --context string                 The name of the kubeconfig context to use
       --disable-compression            If true, opt-out of response compression for all requests to the server
+      --disable-print-path             Disable printing the path to explain
   -h, --help                           help for kubectl
       --insecure-skip-tls-verify       If true, the server's certificate will not be checked for validity. This will make your HTTPS connections insecure
       --kubeconfig string              Path to the kubeconfig file to use for CLI requests.
@@ -95,7 +96,7 @@ Download the binary from [GitHub Releases](https://github.com/keisku/kubectl-exp
 ```shell
 # Other available architectures are linux_arm64, darwin_amd64, darwin_arm64, windows_amd64.
 export ARCH=linux_amd64
-export VERSION=v0.8.3
+export VERSION=v0.9.0
 wget -O- "https://github.com/keisku/kubectl-explore/releases/download/${VERSION}/kubectl-explore_${VERSION}_${ARCH}.tar.gz" | sudo tar -xzf - -C /usr/local/bin && sudo chmod +x /usr/local/bin/kubectl-explore
 ```
 
