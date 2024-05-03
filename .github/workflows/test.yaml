@@ -38,4 +38,4 @@ jobs:
     - name: Since 1.27+, kubectl-explain has been upgraded to v2 which enables OpenAPI v3 by default
       run: |
         diff <(sudo microk8s kubectl explore hpa.*own.*id | tr -d '[:space:]') <(sudo microk8s kubectl explain horizontalpodautoscaler.metadata.ownerReferences.uid | tr -d [':space:'])
-      if: 26 < ${{ matrix.k8s-minor }}
+      if: ${{ 26 < matrix.k8s-minor }}
