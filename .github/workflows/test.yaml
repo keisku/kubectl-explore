@@ -34,7 +34,10 @@ jobs:
         diff <(sudo microk8s kubectl explore --disable-print-path no.*pro | tr -d '[:space:]') <(sudo microk8s kubectl explain node.spec.providerID | tr -d [':space:'])
         diff <(sudo microk8s kubectl explore --disable-print-path node.*pro | tr -d '[:space:]') <(sudo microk8s kubectl explain node.spec.providerID | tr -d [':space:'])
         diff <(sudo microk8s kubectl explore --disable-print-path nodes.*pro | tr -d '[:space:]') <(sudo microk8s kubectl explain node.spec.providerID | tr -d [':space:'])
+        diff <(sudo microk8s kubectl explore --disable-print-path Node.*pro | tr -d '[:space:]') <(sudo microk8s kubectl explain node.spec.providerID | tr -d [':space:'])
         diff <(sudo microk8s kubectl explore --disable-print-path provider | tr -d '[:space:]') <(sudo microk8s kubectl explain node.spec.providerID | tr -d [':space:'])
+        diff <(sudo microk8s kubectl explore --disable-print-path csistoragecapacity.maximumVolumeSize | tr -d '[:space:]') <(sudo microk8s kubectl explain csistoragecapacity.maximumVolumeSize | tr -d [':space:'])
+        diff <(sudo microk8s kubectl explore --disable-print-path csistoragecapacities.maximumVolumeSize | tr -d '[:space:]') <(sudo microk8s kubectl explain csistoragecapacity.maximumVolumeSize | tr -d [':space:'])
     - name: Since 1.27+, kubectl-explain has --disable-print-path been upgraded to v2 which enables OpenAPI v3 by default
       run: |
         diff <(sudo microk8s kubectl explore --disable-print-path hpa.*own.*id | tr -d '[:space:]') <(sudo microk8s kubectl explain horizontalpodautoscaler.metadata.ownerReferences.uid | tr -d [':space:'])
