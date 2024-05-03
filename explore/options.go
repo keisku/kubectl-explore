@@ -29,7 +29,7 @@ type Options struct {
 
 	// After completion
 	inputFieldPathRegex *regexp.Regexp
-	gvrs                []gvr
+	gvrs                []schema.GroupVersionResource
 
 	// Dependencies
 	genericclioptions.IOStreams
@@ -129,19 +129,18 @@ func (o *Options) Complete(f cmdutil.Factory, args []string) error {
 		if err != nil {
 			return err
 		}
-		o.gvrs = []gvr{g}
+		o.gvrs = []schema.GroupVersionResource{g}
 		return nil
 	}
 
-	var gotGVR gvr
+	var gotGVR schema.GroupVersionResource
 	var idx int
 	// Find the first valid resource name in the inputFieldPath.
 	for i := 1; i <= len(o.inputFieldPath); i++ {
-		ret, err := GetGVR(o, o.inputFieldPath[:i])
+		gotGVR, err = GetGVR(o, o.inputFieldPath[:i])
 		if err != nil {
 			continue
 		}
-		gotGVR = gvr{ret}
 		idx = i
 		break
 	}
@@ -159,9 +158,9 @@ func (o *Options) Complete(f cmdutil.Factory, args []string) error {
 	if strings.HasPrefix(o.inputFieldPath, gotGVR.Resource) {
 		// E.g., "nodes.*spec" -> ".*spec"
 		re = strings.TrimLeft(o.inputFieldPath, gotGVR.Resource)
-	} else if strings.HasPrefix(o.inputFieldPath, gotGVR.singularResource()) {
+	} else if strings.HasPrefix(o.inputFieldPath, singularResource(gotGVR.Resource)) {
 		// E.g., "node.*spec" -> ".*spec"
-		re = strings.TrimLeft(o.inputFieldPath, gotGVR.singularResource())
+		re = strings.TrimLeft(o.inputFieldPath, singularResource(gotGVR.Resource))
 	} else {
 		// E.g., "no.*spec" -> ".*spec"
 		left := o.inputFieldPath[:idx]
@@ -171,7 +170,7 @@ func (o *Options) Complete(f cmdutil.Factory, args []string) error {
 	if err != nil {
 		return err
 	}
-	o.gvrs = []gvr{gotGVR}
+	o.gvrs = []schema.GroupVersionResource{gotGVR}
 
 	return nil
 }
@@ -185,7 +184,7 @@ func (o *Options) Run() error {
 			prevPath:   strings.ToLower(gvr.Resource),
 			err:        nil,
 		}
-		gvk, err := o.mapper.KindFor(gvr.GroupVersionResource)
+		gvk, err := o.mapper.KindFor(gvr)
 		if err != nil {
 			return fmt.Errorf("get the group version kind: %w", err)
 		}
@@ -202,7 +201,7 @@ func (o *Options) Run() error {
 		})
 		for _, p := range filteredPaths {
 			pathExplainers[p] = explainer{
-				gvr:             gvr.GroupVersionResource,
+				gvr:             gvr,
 				openAPIV3Client: o.cachedOpenAPIV3Client,
 			}
 			paths = append(paths, p)
@@ -235,21 +234,19 @@ func (o *Options) Run() error {
 	return pathExplainers[paths[idx]].explain(o.Out, paths[idx])
 }
 
-type gvr struct{ schema.GroupVersionResource }
-
-func (g gvr) singularResource() string {
-	if strings.HasSuffix(g.Resource, "s") {
-		return g.Resource[:len(g.Resource)-1]
+func singularResource(resource string) string {
+	if strings.HasSuffix(resource, "s") {
+		return resource[:len(resource)-1]
 	}
-	return g.Resource
+	return resource
 }
 
-func (o *Options) listGVRs() ([]gvr, error) {
+func (o *Options) listGVRs() ([]schema.GroupVersionResource, error) {
 	lists, err := o.discovery.ServerPreferredResources()
 	if err != nil {
 		return nil, err
 	}
-	var gvrs []gvr
+	var gvrs []schema.GroupVersionResource
 	for _, list := range lists {
 		if len(list.APIResources) == 0 {
 			continue
@@ -259,7 +256,7 @@ func (o *Options) listGVRs() ([]gvr, error) {
 			continue
 		}
 		for _, resource := range list.APIResources {
-			gvrs = append(gvrs, gvr{gv.WithResource(resource.Name)})
+			gvrs = append(gvrs, gv.WithResource(resource.Name))
 		}
 	}
 	sort.SliceStable(gvrs, func(i, j int) bool {
@@ -268,10 +265,10 @@ func (o *Options) listGVRs() ([]gvr, error) {
 	return gvrs, nil
 }
 
-func (o *Options) findGVR() (gvr, error) {
+func (o *Options) findGVR() (schema.GroupVersionResource, error) {
 	gvrs, err := o.listGVRs()
 	if err != nil {
-		return gvr{}, err
+		return schema.GroupVersionResource{}, err
 	}
 	idx, err := fuzzyfinder.Find(gvrs, func(i int) string {
 		return gvrs[i].Resource
@@ -282,7 +279,7 @@ func (o *Options) findGVR() (gvr, error) {
 		return gvrs[i].String()
 	}))
 	if err != nil {
-		return gvr{}, fmt.Errorf("fuzzy find the API resource: %w", err)
+		return schema.GroupVersionResource{}, fmt.Errorf("fuzzy find the API resource: %w", err)
 	}
 	return gvrs[idx], nil
 }
