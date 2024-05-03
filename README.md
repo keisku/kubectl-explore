@@ -96,7 +96,8 @@ Download the binary from [GitHub Releases](https://github.com/keisku/kubectl-exp
 ```shell
 # Other available architectures are linux_arm64, darwin_amd64, darwin_arm64, windows_amd64.
 export ARCH=linux_amd64
-export VERSION=v0.9.0
+# Check the latest version, https://github.com/keisku/kubectl-explore/releases/latest
+export VERSION=<LATEST_VERSION>
 wget -O- "https://github.com/keisku/kubectl-explore/releases/download/${VERSION}/kubectl-explore_${VERSION}_${ARCH}.tar.gz" | sudo tar -xzf - -C /usr/local/bin && sudo chmod +x /usr/local/bin/kubectl-explore
 ```
 
