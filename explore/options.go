@@ -140,6 +140,11 @@ func (o *Options) Complete(f cmdutil.Factory, args []string) error {
 		return err
 	}
 
+	if gvar, ok := gvarMap[o.inputFieldPath]; ok {
+		o.gvrs = []schema.GroupVersionResource{gvar.GroupVersionResource}
+		return nil
+	}
+
 	var gvar *groupVersionAPIResource
 	var resourceIdx int
 	for i := len(o.inputFieldPath); i > 0; i-- {
