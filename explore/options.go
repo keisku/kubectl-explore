@@ -141,6 +141,7 @@ func (o *Options) Complete(f cmdutil.Factory, args []string) error {
 	}
 
 	if gvar, ok := gvarMap[o.inputFieldPath]; ok {
+		o.inputFieldPathRegex = regexp.MustCompile(".*")
 		o.gvrs = []schema.GroupVersionResource{gvar.GroupVersionResource}
 		return nil
 	}
