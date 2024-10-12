@@ -43,6 +43,16 @@ The plugin is available in [nixpkgs](https://search.nixos.org/packages?query=kub
 nix-env -iA nixpkgs.kubectl-explore
 ```
 
+### Arch
+
+use [yay](https://aur.archlinux.org/packages/yay-bin) or [paru](https://aur.archlinux.org/packages/paru-bin) to install the package from the AUR.
+
+[kubectl-explore-bin](https://aur.archlinux.org/packages/kubectl-explore-bin/)
+
+```bash
+[yay/paru] -S kubectl-explore-bin
+```
+
 ### Download the binary
 
 Download the binary from [GitHub Releases](https://github.com/keisku/kubectl-explore/releases) and drop it in your `$PATH`.
