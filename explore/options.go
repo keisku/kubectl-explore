@@ -27,6 +27,7 @@ type Options struct {
 	apiVersion       string
 	inputFieldPath   string
 	disablePrintPath bool
+	showBrackets     bool
 
 	// After completion
 	inputFieldPathRegex *regexp.Regexp
@@ -69,6 +70,7 @@ kubectl explore --context=onecontext
 	}
 	cmd.Flags().StringVar(&o.apiVersion, "api-version", o.apiVersion, "Get different explanations for particular API version (API group/version)")
 	cmd.Flags().BoolVar(&o.disablePrintPath, "disable-print-path", o.disablePrintPath, "Disable printing the path to explain")
+	cmd.Flags().BoolVar(&o.showBrackets, "show-brackets", o.showBrackets, "Enable showing brackets for fields that are arrays")
 	kubeConfigFlags := defaultConfigFlags().WithWarningPrinter(o.IOStreams)
 	flags := cmd.PersistentFlags()
 	kubeConfigFlags.AddFlags(flags)
@@ -194,13 +196,16 @@ func (o *Options) Complete(f cmdutil.Factory, args []string) error {
 }
 
 func (o *Options) Run() error {
-	pathExplainers := make(map[string]explainer)
-	var paths []string
+	pathExplainers := make(map[path]explainer)
+	var paths []path
 	for _, gvr := range o.gvrs {
 		visitor := &schemaVisitor{
-			pathSchema: make(map[string]proto.Schema),
-			prevPath:   strings.ToLower(gvr.Resource),
-			err:        nil,
+			pathSchema: make(map[path]proto.Schema),
+			prevPath: path{
+				original:     strings.ToLower(gvr.Resource),
+				withBrackets: strings.ToLower(gvr.Resource),
+			},
+			err: nil,
 		}
 		gvk, err := o.mapper.KindFor(gvr)
 		if err != nil {
@@ -214,14 +219,15 @@ func (o *Options) Run() error {
 		if visitor.err != nil {
 			return visitor.err
 		}
-		filteredPaths := visitor.listPaths(func(s string) bool {
-			return o.inputFieldPathRegex.MatchString(s)
+		filteredPaths := visitor.listPaths(func(s path) bool {
+			return o.inputFieldPathRegex.MatchString(s.original)
 		})
 		for _, p := range filteredPaths {
 			pathExplainers[p] = explainer{
-				gvr:             gvr,
-				openAPIV3Client: o.cachedOpenAPIV3Client,
-				enablePrintPath: !o.disablePrintPath,
+				gvr:                 gvr,
+				openAPIV3Client:     o.cachedOpenAPIV3Client,
+				enablePrintPath:     !o.disablePrintPath,
+				enablePrintBrackets: o.showBrackets,
 			}
 			paths = append(paths, p)
 		}
@@ -232,10 +238,12 @@ func (o *Options) Run() error {
 	if len(paths) == 1 {
 		return pathExplainers[paths[0]].explain(o.Out, paths[0])
 	}
-	sort.Strings(paths)
+	sort.SliceStable(paths, func(i, j int) bool {
+		return paths[i].original < paths[j].original
+	})
 	idx, err := fuzzyfinder.Find(
 		paths,
-		func(i int) string { return paths[i] },
+		func(i int) string { return paths[i].original },
 		fuzzyfinder.WithPreviewWindow(func(i, _, _ int) string {
 			if i < 0 {
 				return ""

@@ -1,7 +1,6 @@
 package explore
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -12,22 +11,27 @@ import (
 )
 
 type explainer struct {
-	gvr             schema.GroupVersionResource
-	openAPIV3Client openapiclient.Client
-	enablePrintPath bool
+	gvr                 schema.GroupVersionResource
+	openAPIV3Client     openapiclient.Client
+	enablePrintPath     bool
+	enablePrintBrackets bool
 }
 
-func (e explainer) explain(w io.Writer, path string) error {
-	if path == "" {
-		return errors.New("path must be provided")
+func (e explainer) explain(w io.Writer, path path) error {
+	if path.isEmpty() {
+		return fmt.Errorf("path must not be empty: %#v", path)
 	}
-	fields := strings.Split(path, ".")
+	fields := strings.Split(path.original, ".")
 	if len(fields) > 0 {
 		// Remove resource name
 		fields = fields[1:]
 	}
 	if e.enablePrintPath {
-		w.Write([]byte(fmt.Sprintf("PATH: %s\n", path)))
+		if e.enablePrintBrackets {
+			w.Write([]byte(fmt.Sprintf("PATH: %s\n", path.withBrackets)))
+		} else {
+			w.Write([]byte(fmt.Sprintf("PATH: %s\n", path.original)))
+		}
 	}
 	return explainv2.PrintModelDescription(
 		fields,

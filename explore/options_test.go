@@ -213,13 +213,18 @@ func Test_Run(t *testing.T) {
 		},
 	}
 	tests := []struct {
-		inputFieldPath string
-		expectRunError bool
-		expectKeywords []string
+		inputFieldPath   string
+		disablePrintPath bool
+		showBrackets     bool
+		expectRunError   bool
+		expectKeywords   []string
+		unexpectKeywords []string
 	}{
 		{
-			inputFieldPath: "no.*pro",
-			expectRunError: false,
+			inputFieldPath:   "no.*pro",
+			disablePrintPath: false,
+			showBrackets:     false,
+			expectRunError:   false,
 			expectKeywords: []string{
 				"Node",
 				"providerID",
@@ -227,8 +232,10 @@ func Test_Run(t *testing.T) {
 			},
 		},
 		{
-			inputFieldPath: "node.*pro",
-			expectRunError: false,
+			inputFieldPath:   "node.*pro",
+			disablePrintPath: false,
+			showBrackets:     false,
+			expectRunError:   false,
 			expectKeywords: []string{
 				"Node",
 				"providerID",
@@ -236,8 +243,10 @@ func Test_Run(t *testing.T) {
 			},
 		},
 		{
-			inputFieldPath: "nodes.*pro",
-			expectRunError: false,
+			inputFieldPath:   "nodes.*pro",
+			disablePrintPath: false,
+			showBrackets:     false,
+			expectRunError:   false,
 			expectKeywords: []string{
 				"Node",
 				"providerID",
@@ -245,8 +254,10 @@ func Test_Run(t *testing.T) {
 			},
 		},
 		{
-			inputFieldPath: "providerID",
-			expectRunError: false,
+			inputFieldPath:   "providerID",
+			disablePrintPath: false,
+			showBrackets:     false,
+			expectRunError:   false,
 			expectKeywords: []string{
 				"Node",
 				"providerID",
@@ -254,8 +265,10 @@ func Test_Run(t *testing.T) {
 			},
 		},
 		{
-			inputFieldPath: "hpa.*own.*id",
-			expectRunError: false,
+			inputFieldPath:   "hpa.*own.*id",
+			disablePrintPath: false,
+			showBrackets:     false,
+			expectRunError:   false,
 			expectKeywords: []string{
 				"autoscaling",
 				"HorizontalPodAutoscaler",
@@ -264,8 +277,10 @@ func Test_Run(t *testing.T) {
 			},
 		},
 		{
-			inputFieldPath: "horizontalpodautoscalers.*own.*id",
-			expectRunError: false,
+			inputFieldPath:   "horizontalpodautoscalers.*own.*id",
+			disablePrintPath: false,
+			showBrackets:     false,
+			expectRunError:   false,
 			expectKeywords: []string{
 				"autoscaling",
 				"HorizontalPodAutoscaler",
@@ -274,8 +289,10 @@ func Test_Run(t *testing.T) {
 			},
 		},
 		{
-			inputFieldPath: "horizontalpodautoscaler.*own.*id",
-			expectRunError: false,
+			inputFieldPath:   "horizontalpodautoscaler.*own.*id",
+			disablePrintPath: false,
+			showBrackets:     false,
+			expectRunError:   false,
 			expectKeywords: []string{
 				"autoscaling",
 				"HorizontalPodAutoscaler",
@@ -284,8 +301,10 @@ func Test_Run(t *testing.T) {
 			},
 		},
 		{
-			inputFieldPath: "csistoragecapacity.maximumVolumeSize",
-			expectRunError: false,
+			inputFieldPath:   "csistoragecapacity.maximumVolumeSize",
+			disablePrintPath: false,
+			showBrackets:     false,
+			expectRunError:   false,
 			expectKeywords: []string{
 				"CSIStorageCapacity",
 				"storage.k8s.io",
@@ -294,8 +313,10 @@ func Test_Run(t *testing.T) {
 			},
 		},
 		{
-			inputFieldPath: "csistoragecapacities.maximumVolumeSize",
-			expectRunError: false,
+			inputFieldPath:   "csistoragecapacities.maximumVolumeSize",
+			disablePrintPath: false,
+			showBrackets:     false,
+			expectRunError:   false,
 			expectKeywords: []string{
 				"CSIStorageCapacity",
 				"storage.k8s.io",
@@ -304,19 +325,52 @@ func Test_Run(t *testing.T) {
 			},
 		},
 		{
-			inputFieldPath: "CSIStorageCapacity.*VolumeSize",
-			expectRunError: false,
+			inputFieldPath:   "CSIStorageCapacity.*VolumeSize",
+			disablePrintPath: false,
+			showBrackets:     false,
+			expectRunError:   false,
 			expectKeywords: []string{
 				"CSIStorageCapacity",
 				"storage.k8s.io",
 				"v1",
 				"PATH: csistoragecapacities.maximumVolumeSize",
+			},
+		},
+		{
+			inputFieldPath:   "nodes.status.conditions.type",
+			disablePrintPath: false,
+			showBrackets:     true,
+			expectRunError:   false,
+			expectKeywords: []string{
+				"Node",
+				"type",
+				"PATH: nodes.status.conditions[].type",
+			},
+		},
+		{
+			inputFieldPath:   "nodes.status.conditions.type",
+			disablePrintPath: true,
+			showBrackets:     true,
+			expectRunError:   false,
+			expectKeywords: []string{
+				"Node",
+				"type",
+			},
+			unexpectKeywords: []string{
+				"PATH: nodes.status.conditions[].type",
+				"PATH: nodes.status.conditions.type",
 			},
 		},
 	}
 	for _, tt := range tests {
 		for _, version := range k8sVersions {
-			t.Run(fmt.Sprintf("version: %s inputFieldPath: %s", version, tt.inputFieldPath), func(t *testing.T) {
+			t.Run(fmt.Sprintf(
+				"version: %s inputFieldPath: %s, disablePrintPath: %v, showBrackets: %v",
+				version,
+				tt.inputFieldPath,
+				tt.disablePrintPath,
+				tt.showBrackets,
+			), func(t *testing.T) {
 				fakeServer := fakeServers[version]
 				fakeDiscoveryClient := discovery.NewDiscoveryClientForConfigOrDie(&rest.Config{Host: fakeServer.HttpServer.URL})
 				tf := cmdtesting.NewTestFactory()
@@ -338,6 +392,8 @@ func Test_Run(t *testing.T) {
 					Out:    &stdout,
 					ErrOut: &errout,
 				})
+				explore.SetDisablePrintPath(opts, tt.disablePrintPath)
+				explore.SetShowBrackets(opts, tt.showBrackets)
 				require.NoError(t, opts.Complete(tf, []string{tt.inputFieldPath}))
 				err := opts.Run()
 				if tt.expectRunError {
@@ -347,6 +403,9 @@ func Test_Run(t *testing.T) {
 				}
 				for _, keyword := range tt.expectKeywords {
 					require.Contains(t, stdout.String(), keyword)
+				}
+				for _, keyword := range tt.unexpectKeywords {
+					require.NotContains(t, stdout.String(), keyword)
 				}
 			})
 		}

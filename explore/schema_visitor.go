@@ -8,9 +8,18 @@ import (
 	"k8s.io/kubectl/pkg/explain"
 )
 
+type path struct {
+	original     string
+	withBrackets string
+}
+
+func (p path) isEmpty() bool {
+	return p.original == "" && p.withBrackets == ""
+}
+
 type schemaVisitor struct {
-	prevPath   string
-	pathSchema map[string]proto.Schema
+	prevPath   path
+	pathSchema map[path]proto.Schema
 	err        error
 }
 
@@ -18,15 +27,21 @@ var _ proto.SchemaVisitor = (*schemaVisitor)(nil)
 
 func (v *schemaVisitor) VisitKind(k *proto.Kind) {
 	keys := k.Keys()
-	paths := make([]string, len(keys))
+	paths := make([]path, len(keys))
 	for i, key := range keys {
-		paths[i] = strings.Join([]string{v.prevPath, key}, ".")
+		paths[i] = path{
+			original:     strings.Join([]string{v.prevPath.original, key}, "."),
+			withBrackets: strings.Join([]string{v.prevPath.withBrackets, key}, "."),
+		}
 	}
 	for i, key := range keys {
 		schema, err := explain.LookupSchemaForField(k, []string{key})
 		if err != nil {
 			v.err = err
 			return
+		}
+		if _, ok := schema.(*proto.Array); ok {
+			paths[i].withBrackets += "[]"
 		}
 		v.pathSchema[paths[i]] = schema
 		v.prevPath = paths[i]
@@ -57,13 +72,15 @@ func (v *schemaVisitor) VisitMap(m *proto.Map) {
 	m.SubType.Accept(v)
 }
 
-func (v *schemaVisitor) listPaths(filter func(string) bool) []string {
-	paths := make([]string, 0, len(v.pathSchema))
+func (v *schemaVisitor) listPaths(filter func(path) bool) []path {
+	paths := make([]path, 0, len(v.pathSchema))
 	for path := range v.pathSchema {
 		if filter(path) {
 			paths = append(paths, path)
 		}
 	}
-	sort.Strings(paths)
+	sort.SliceStable(paths, func(i, j int) bool {
+		return paths[i].original < paths[j].original
+	})
 	return paths
 }
