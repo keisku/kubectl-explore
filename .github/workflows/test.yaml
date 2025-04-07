@@ -8,7 +8,7 @@ jobs:
   test:
     strategy:
       matrix:
-        k8s-minor: [25, 26, 27, 28, 29, 30, 31]
+        k8s-minor: [25, 26, 27, 28, 29, 30, 31, 32]
         os: [ubuntu-latest]
     runs-on: ubuntu-latest
     steps:
