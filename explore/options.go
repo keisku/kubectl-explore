@@ -66,6 +66,9 @@ kubectl explore sts.*Account
 
 # Fuzzy-find the field to explain from all API resources in the selected cluster.
 kubectl explore --context=onecontext
+
+# Fuzzy-find the field to explain from a specific api-version
+kubectl explore --api-version=apps/v1
 `,
 	}
 	cmd.Flags().StringVar(&o.apiVersion, "api-version", o.apiVersion, "Get different explanations for particular API version (API group/version)")
@@ -261,8 +264,31 @@ func (o *Options) Run() error {
 	return pathExplainers[paths[idx]].explain(o.Out, paths[idx])
 }
 
-func (o *Options) listGVRs() ([]schema.GroupVersionResource, error) {
+// serverPreferredResources fetches and filters the server's preferred resources.
+// If o.apiVersion is set, it only returns resources matching that API version.
+func (o *Options) serverPreferredResources() ([]*metav1.APIResourceList, error) {
 	lists, err := o.discovery.ServerPreferredResources()
+	if err != nil {
+		return nil, err
+	}
+	if o.apiVersion == "" {
+		return lists, nil
+	}
+
+	var filteredLists []*metav1.APIResourceList
+	for _, list := range lists {
+		if list.GroupVersion == o.apiVersion {
+			filteredLists = append(filteredLists, list)
+		}
+	}
+	if len(filteredLists) == 0 {
+		return nil, fmt.Errorf("no resources found for API version %q", o.apiVersion)
+	}
+	return filteredLists, nil
+}
+
+func (o *Options) listGVRs() ([]schema.GroupVersionResource, error) {
+	lists, err := o.serverPreferredResources()
 	if err != nil {
 		return nil, err
 	}
@@ -290,6 +316,12 @@ func (o *Options) findGVR() (schema.GroupVersionResource, error) {
 	if err != nil {
 		return schema.GroupVersionResource{}, err
 	}
+	if len(gvrs) == 0 {
+		if o.apiVersion != "" {
+			return schema.GroupVersionResource{}, fmt.Errorf("no resources found for API version: %s", o.apiVersion)
+		}
+		return schema.GroupVersionResource{}, fmt.Errorf("no resources found")
+	}
 	idx, err := fuzzyfinder.Find(gvrs, func(i int) string {
 		return gvrs[i].Resource
 	}, fuzzyfinder.WithPreviewWindow(func(i, _, _ int) string {
@@ -310,7 +342,7 @@ type groupVersionAPIResource struct {
 }
 
 func (o *Options) discover() (map[string]*groupVersionAPIResource, []schema.GroupVersionResource, error) {
-	lists, err := o.discovery.ServerPreferredResources()
+	lists, err := o.serverPreferredResources()
 	if err != nil {
 		return nil, nil, err
 	}
