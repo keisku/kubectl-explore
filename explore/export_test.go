@@ -7,3 +7,7 @@ func SetDisablePrintPath(o *Options, b bool) {
 func SetShowBrackets(o *Options, b bool) {
 	o.showBrackets = b
 }
+
+func SetAPIVersion(o *Options, apiVersion string) {
+	o.apiVersion = apiVersion
+}

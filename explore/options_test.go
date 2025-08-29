@@ -34,7 +34,7 @@ const (
 	swaggerURLFormat           = "https://raw.githubusercontent.com/kubernetes/kubernetes/release-%s/api/openapi-spec/swagger.json"
 )
 
-var k8sVersions = []string{"1.25", "1.26", "1.27", "1.28", "1.29", "1.30", "1.31", "1.32"}
+var k8sVersions = []string{"1.25", "1.26", "1.27", "1.28", "1.29", "1.30", "1.31", "1.32", "1.33", "1.34"}
 
 func openAPIResources(version string) (openapi.Resources, error) {
 	resp, err := http.DefaultClient.Get(fmt.Sprintf(swaggerURLFormat, version))
@@ -107,7 +107,7 @@ func makeOpenAPISpecV3Directory(version string) (string, error) {
 		return "", fmt.Errorf("get openapi spec v3 file paths: %w", err)
 	}
 	testdataDir := filepath.Join(os.TempDir(), "kubectl-explore.d", version)
-	if err := os.MkdirAll(testdataDir, 0755); err != nil {
+	if err := os.MkdirAll(testdataDir, 0o755); err != nil {
 		return "", fmt.Errorf("create testdata directory: %w", err)
 	}
 	for _, path := range paths {
@@ -116,7 +116,7 @@ func makeOpenAPISpecV3Directory(version string) (string, error) {
 			return "", fmt.Errorf("parse file path URL: %w", err)
 		}
 		fpath := filepath.Join(testdataDir, convertFilename(filepath.Base(filePathURL.Path)))
-		if os.MkdirAll(filepath.Dir(fpath), 0755); err != nil {
+		if os.MkdirAll(filepath.Dir(fpath), 0o755); err != nil {
 			return "", fmt.Errorf("create directory: %w", err)
 		}
 		f, err := os.Create(fpath)
@@ -188,6 +188,18 @@ func Test_Run(t *testing.T) {
 			},
 		},
 		{
+			GroupVersion: "autoscaling/v1",
+			APIResources: []v1.APIResource{
+				{
+					Name:         "horizontalpodautoscalers",
+					SingularName: "horizontalpodautoscaler",
+					Namespaced:   true,
+					Kind:         "HorizontalPodAutoscaler",
+					ShortNames:   []string{"hpa"},
+				},
+			},
+		},
+		{
 			GroupVersion: "storage.k8s.io/v1",
 			APIResources: []v1.APIResource{
 				{
@@ -213,6 +225,7 @@ func Test_Run(t *testing.T) {
 		},
 	}
 	tests := []struct {
+		apiVersion       string
 		inputFieldPath   string
 		disablePrintPath bool
 		showBrackets     bool
@@ -265,6 +278,7 @@ func Test_Run(t *testing.T) {
 			},
 		},
 		{
+			apiVersion:       "autoscaling/v2",
 			inputFieldPath:   "hpa.*own.*id",
 			disablePrintPath: false,
 			showBrackets:     false,
@@ -277,6 +291,7 @@ func Test_Run(t *testing.T) {
 			},
 		},
 		{
+			apiVersion:       "autoscaling/v1",
 			inputFieldPath:   "horizontalpodautoscalers.*own.*id",
 			disablePrintPath: false,
 			showBrackets:     false,
@@ -284,11 +299,12 @@ func Test_Run(t *testing.T) {
 			expectKeywords: []string{
 				"autoscaling",
 				"HorizontalPodAutoscaler",
-				"v2",
+				"v1",
 				"PATH: horizontalpodautoscalers.metadata.ownerReferences.uid",
 			},
 		},
 		{
+			apiVersion:       "autoscaling/v2",
 			inputFieldPath:   "horizontalpodautoscaler.*own.*id",
 			disablePrintPath: false,
 			showBrackets:     false,
@@ -394,6 +410,7 @@ func Test_Run(t *testing.T) {
 				})
 				explore.SetDisablePrintPath(opts, tt.disablePrintPath)
 				explore.SetShowBrackets(opts, tt.showBrackets)
+				explore.SetAPIVersion(opts, tt.apiVersion)
 				require.NoError(t, opts.Complete(tf, []string{tt.inputFieldPath}))
 				err := opts.Run()
 				if tt.expectRunError {
