@@ -3,7 +3,7 @@ module github.com/keisku/kubectl-explore
 go 1.25.0
 
 require (
-	github.com/google/gnostic v0.7.0
+	github.com/google/gnostic v0.7.1
 	github.com/ktr0731/go-fuzzyfinder v0.9.0
 	github.com/spf13/cobra v1.10.1
 	github.com/stretchr/testify v1.11.1
