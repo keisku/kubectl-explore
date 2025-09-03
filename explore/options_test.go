@@ -34,7 +34,7 @@ const (
 	swaggerURLFormat           = "https://raw.githubusercontent.com/kubernetes/kubernetes/release-%s/api/openapi-spec/swagger.json"
 )
 
-var k8sVersions = []string{"1.25", "1.26", "1.27", "1.28", "1.29", "1.30", "1.31", "1.32", "1.33", "1.34"}
+var k8sVersions = []string{"1.27", "1.28", "1.29", "1.30", "1.31", "1.32", "1.33", "1.34"}
 
 func openAPIResources(version string) (openapi.Resources, error) {
 	resp, err := http.DefaultClient.Get(fmt.Sprintf(swaggerURLFormat, version))

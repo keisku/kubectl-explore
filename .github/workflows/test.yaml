@@ -8,7 +8,7 @@ jobs:
   test:
     strategy:
       matrix:
-        k8s-minor: [25, 26, 27, 28, 29, 30, 31, 32, 33, 34]
+        k8s-minor: [27, 28, 29, 30, 31, 32, 33, 34]
         os: [ubuntu-latest]
     runs-on: ubuntu-latest
     steps:
@@ -36,10 +36,7 @@ jobs:
         diff <(sudo microk8s kubectl explore --disable-print-path nodes.*pro | tr -d '[:space:]') <(sudo microk8s kubectl explain node.spec.providerID | tr -d [':space:'])
         diff <(sudo microk8s kubectl explore --disable-print-path Node.*pro | tr -d '[:space:]') <(sudo microk8s kubectl explain node.spec.providerID | tr -d [':space:'])
         diff <(sudo microk8s kubectl explore --disable-print-path provider | tr -d '[:space:]') <(sudo microk8s kubectl explain node.spec.providerID | tr -d [':space:'])
-    - name: For 1.27+
-      run: |
         diff <(sudo microk8s kubectl explore --disable-print-path hpa.*own.*id | tr -d '[:space:]') <(sudo microk8s kubectl explain horizontalpodautoscaler.metadata.ownerReferences.uid | tr -d [':space:'])
         diff <(sudo microk8s kubectl explore --disable-print-path csistoragecapacity.maximumVolumeSize | tr -d '[:space:]') <(sudo microk8s kubectl explain csistoragecapacity.maximumVolumeSize | tr -d [':space:'])
         diff <(sudo microk8s kubectl explore --disable-print-path csistoragecapacities.maximumVolumeSize | tr -d '[:space:]') <(sudo microk8s kubectl explain csistoragecapacity.maximumVolumeSize | tr -d [':space:'])
         diff <(sudo microk8s kubectl explore --disable-print-path CSIStorageCapacity.*VolumeSize | tr -d '[:space:]') <(sudo microk8s kubectl explain csistoragecapacity.maximumVolumeSize | tr -d [':space:'])
-      if: ${{ 26 < matrix.k8s-minor }}
