@@ -85,6 +85,7 @@ func openAPISpecV3FilePaths(version string) ([]string, error) {
 
 var openAPISpecV3Directories map[string]string = func() map[string]string {
 	m := make(map[string]string)
+	var mu sync.Mutex
 	var wg sync.WaitGroup
 	wg.Add(len(k8sVersions))
 	for _, version := range k8sVersions {
@@ -93,7 +94,9 @@ var openAPISpecV3Directories map[string]string = func() map[string]string {
 			if err != nil {
 				panic(err)
 			}
+			mu.Lock()
 			m[version] = testdata
+			mu.Unlock()
 			wg.Done()
 		}(version)
 	}
