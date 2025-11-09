@@ -264,31 +264,63 @@ func (o *Options) Run() error {
 	return pathExplainers[paths[idx]].explain(o.Out, paths[idx])
 }
 
-// serverPreferredResources fetches and filters the server's preferred resources.
-// If o.apiVersion is set, it only returns resources matching that API version.
-func (o *Options) serverPreferredResources() ([]*metav1.APIResourceList, error) {
+func (o *Options) apiResourceLists() ([]*metav1.APIResourceList, error) {
+	if o.apiVersion != "" {
+		list, err := o.discovery.ServerResourcesForGroupVersion(o.apiVersion)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch resources for API version %q: %w", o.apiVersion, err)
+		}
+		if list == nil {
+			return nil, fmt.Errorf("no resources found for API version %q", o.apiVersion)
+		}
+		if len(list.APIResources) == 0 {
+			return nil, fmt.Errorf("no resources found for API version %q", o.apiVersion)
+		}
+		filtered := filterOutSubresources(list)
+		if filtered == nil {
+			return nil, fmt.Errorf("no resources found for API version %q", o.apiVersion)
+		}
+		return filtered, nil
+	}
+
 	lists, err := o.discovery.ServerPreferredResources()
 	if err != nil {
 		return nil, err
 	}
-	if o.apiVersion == "" {
-		return lists, nil
+	filtered := filterOutSubresources(lists...)
+	if len(filtered) == 0 {
+		return nil, fmt.Errorf("no resources found")
 	}
+	return filtered, nil
+}
 
-	var filteredLists []*metav1.APIResourceList
+// https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/#subresources
+func filterOutSubresources(lists ...*metav1.APIResourceList) []*metav1.APIResourceList {
+	filteredLists := make([]*metav1.APIResourceList, 0, len(lists))
 	for _, list := range lists {
-		if list.GroupVersion == o.apiVersion {
-			filteredLists = append(filteredLists, list)
+		if list == nil {
+			continue
 		}
+		// Avoid modifying the original list
+		copy := list.DeepCopy()
+		resources := make([]metav1.APIResource, 0, len(copy.APIResources))
+		for _, resource := range copy.APIResources {
+			if strings.Contains(resource.Name, "/") {
+				continue
+			}
+			resources = append(resources, resource)
+		}
+		if len(resources) == 0 {
+			continue
+		}
+		copy.APIResources = resources
+		filteredLists = append(filteredLists, copy)
 	}
-	if len(filteredLists) == 0 {
-		return nil, fmt.Errorf("no resources found for API version %q", o.apiVersion)
-	}
-	return filteredLists, nil
+	return filteredLists
 }
 
 func (o *Options) listGVRs() ([]schema.GroupVersionResource, error) {
-	lists, err := o.serverPreferredResources()
+	lists, err := o.apiResourceLists()
 	if err != nil {
 		return nil, err
 	}
@@ -322,6 +354,11 @@ func (o *Options) findGVR() (schema.GroupVersionResource, error) {
 		}
 		return schema.GroupVersionResource{}, fmt.Errorf("no resources found")
 	}
+	if len(gvrs) == 1 {
+		// If there is only one resource, return it directly.
+		// This is a common pattern when using kubectl explore with a specific API version.
+		return gvrs[0], nil
+	}
 	idx, err := fuzzyfinder.Find(gvrs, func(i int) string {
 		return gvrs[i].Resource
 	}, fuzzyfinder.WithPreviewWindow(func(i, _, _ int) string {
@@ -342,7 +379,7 @@ type groupVersionAPIResource struct {
 }
 
 func (o *Options) discover() (map[string]*groupVersionAPIResource, []schema.GroupVersionResource, error) {
-	lists, err := o.serverPreferredResources()
+	lists, err := o.apiResourceLists()
 	if err != nil {
 		return nil, nil, err
 	}
