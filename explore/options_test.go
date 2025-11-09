@@ -149,6 +149,25 @@ func convertFilename(filename string) string {
 	return newPath
 }
 
+type fakeDiscoveryClientExtension struct {
+	// To avoid panic, we need to implement the ServerResourcesForGroupVersion method.
+	// This implementation doesn't support ServerResourcesForGroupVersion.
+	*cmdtesting.FakeCachedDiscoveryClient
+}
+
+func (f *fakeDiscoveryClientExtension) ServerResourcesForGroupVersion(groupVersion string) (*v1.APIResourceList, error) {
+	lists, err := f.FakeCachedDiscoveryClient.ServerPreferredResources()
+	if err != nil {
+		return nil, err
+	}
+	for _, list := range lists {
+		if list.GroupVersion == groupVersion {
+			return list, nil
+		}
+	}
+	return nil, fmt.Errorf("no resources found for API version %q", groupVersion)
+}
+
 func Test_Run(t *testing.T) {
 	fakeServers := make(map[string]*clienttestutil.FakeOpenAPIServer)
 	for _, version := range k8sVersions {
@@ -394,6 +413,9 @@ func Test_Run(t *testing.T) {
 				fakeDiscoveryClient := discovery.NewDiscoveryClientForConfigOrDie(&rest.Config{Host: fakeServer.HttpServer.URL})
 				tf := cmdtesting.NewTestFactory()
 				defer tf.Cleanup()
+				fakeCachedDiscoveryClient.DiscoveryInterface = &fakeDiscoveryClientExtension{
+					FakeCachedDiscoveryClient: fakeCachedDiscoveryClient,
+				}
 				tf.WithDiscoveryClient(fakeCachedDiscoveryClient)
 				tf.OpenAPIV3ClientFunc = func() (openapiclient.Client, error) {
 					return fakeDiscoveryClient.OpenAPIV3(), nil

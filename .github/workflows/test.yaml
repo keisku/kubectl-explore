@@ -37,6 +37,7 @@ jobs:
         diff <(sudo microk8s kubectl explore --disable-print-path Node.*pro | tr -d '[:space:]') <(sudo microk8s kubectl explain node.spec.providerID | tr -d [':space:'])
         diff <(sudo microk8s kubectl explore --disable-print-path provider | tr -d '[:space:]') <(sudo microk8s kubectl explain node.spec.providerID | tr -d [':space:'])
         diff <(sudo microk8s kubectl explore --disable-print-path hpa.*own.*id | tr -d '[:space:]') <(sudo microk8s kubectl explain horizontalpodautoscaler.metadata.ownerReferences.uid | tr -d [':space:'])
+        diff <(sudo microk8s kubectl explore --disable-print-path --api-version autoscaling/v1 hpa.*own.*id | tr -d '[:space:]') <(sudo microk8s kubectl explain --api-version autoscaling/v1 horizontalpodautoscaler.metadata.ownerReferences.uid | tr -d [':space:'])
         diff <(sudo microk8s kubectl explore --disable-print-path csistoragecapacity.maximumVolumeSize | tr -d '[:space:]') <(sudo microk8s kubectl explain csistoragecapacity.maximumVolumeSize | tr -d [':space:'])
         diff <(sudo microk8s kubectl explore --disable-print-path csistoragecapacities.maximumVolumeSize | tr -d '[:space:]') <(sudo microk8s kubectl explain csistoragecapacity.maximumVolumeSize | tr -d [':space:'])
         diff <(sudo microk8s kubectl explore --disable-print-path CSIStorageCapacity.*VolumeSize | tr -d '[:space:]') <(sudo microk8s kubectl explain csistoragecapacity.maximumVolumeSize | tr -d [':space:'])
